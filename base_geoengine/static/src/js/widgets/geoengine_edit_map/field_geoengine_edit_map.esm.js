@@ -15,15 +15,20 @@ export class FieldGeoEngineEditMap extends Component {
         // Allows you to have a unique id if you put the same field in the view several times
         this.id = `map_${this.props.id}`;
         this.orm = useService("orm");
+        this.ol = undefined;
 
         onWillStart(() =>
             Promise.all([
-                loadBundle({
-                    jsLibs: [
-                        "/base_geoengine/static/lib/ol-7.2.2/ol.js",
-                        "/base_geoengine/static/lib/chromajs-2.4.2/chroma.js",
-                    ],
-                }),
+                loadBundle(
+                    "base_geoengine.assets_jsLibs_geoengine"
+                    /*
+                        {
+                            jsLibs: [
+                                "/base_geoengine/static/lib/ol-7.2.2/ol.js",
+                                "/base_geoengine/static/lib/chromajs-2.4.2/chroma.js",
+                            ],
+                        }*/
+                ),
             ])
         );
 

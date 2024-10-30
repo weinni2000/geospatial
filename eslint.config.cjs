@@ -2,7 +2,7 @@ jsdoc = require("eslint-plugin-jsdoc");
 
 const config = [{
     plugins: {
-      jsdoc,
+        jsdoc,
     },
 
     languageOptions: {
@@ -16,6 +16,11 @@ const config = [{
             openerp: "readonly",
             owl: "readonly",
             luxon: "readonly",
+            document: "readonly",
+            ol: "writable",
+            localStorage: "readonly",
+            chroma: "readonly",
+            geostats: "readonly",
         },
 
         ecmaVersion: 2024,
@@ -152,7 +157,8 @@ const config = [{
         strict: ["error", "function"],
         "use-isnan": "error",
 
-        "jsdoc/check-tag-names": "warn",
+        //"jsdoc/check-tag-names": "warn",
+        "jsdoc/check-tag-names": ["error", { "definedTags": ["odoo-module"] }],
         "jsdoc/check-types": "warn",
         "jsdoc/require-param-description": "off",
         "jsdoc/require-return": "off",

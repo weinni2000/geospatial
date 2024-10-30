@@ -24,3 +24,4 @@ from . import geo_raster_layer
 from . import geo_vector_layer
 from . import ir_view
 from . import ir_model
+from . import log_cleaner

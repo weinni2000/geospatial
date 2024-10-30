@@ -1,6 +1,7 @@
 
 target-version = "py310"
 fix = true
+line-length = 115
 
 [lint]
 extend-select = [
@@ -11,6 +12,8 @@ extend-select = [
     "UP",  # pyupgrade
 ]
 exclude = ["setup/*"]
+
+ignore = ["UP031"]
 
 [format]
 exclude = ["setup/*"]

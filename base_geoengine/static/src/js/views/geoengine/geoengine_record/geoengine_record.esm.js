@@ -3,14 +3,13 @@
 /**
  * Copyright 2023 ACSONE SA/NV
  */
-
+import {Component, onWillUpdateProps} from "@odoo/owl";
 import {Field} from "@web/views/fields/field";
 import {GeoengineCompiler} from "../geoengine_compiler.esm";
 import {INFO_BOX_ATTRIBUTE} from "../geoengine_arch_parser.esm";
 import {registry} from "@web/core/registry";
 import {useViewCompiler} from "@web/views/view_compiler";
-import {Component, onWillUpdateProps} from "@odoo/owl";
-import {useService} from "@web/core/utils/hooks";
+import {user} from "@web/core/user";
 
 const formatters = registry.category("formatters");
 
@@ -26,7 +25,7 @@ export class GeoengineRecord extends Component {
      * Setup the record by compiling the arch and the info-box template.
      */
     setup() {
-        this.user = useService("user");
+        this.user = user;
         const {Compiler, templates} = this.props;
         const ViewCompiler = Compiler || this.constructor.Compiler;
 

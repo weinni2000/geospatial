@@ -43,7 +43,7 @@ class GeoField(fields.Field):
             postgis_geom_type += "ZM"
         return ("geometry", f"geometry({postgis_geom_type}, {self.srid})")
 
-    def convert_to_column(self, value, record, values=None):
+    def convert_to_column(self, value, record, values=None, validate=True):
         """Convert value to database format
 
         value can be geojson, wkt, shapely geometry object.
@@ -116,6 +116,7 @@ class GeoField(fields.Field):
                     geom_type=shape.geom_type.lower(),
                     geo_type=self.geo_type.lower(),
                 )
+                # NIKMOD
                 raise TypeError(msg)
         return shape
 
@@ -129,17 +130,11 @@ class GeoField(fields.Field):
         cr.execute(query, (model._table, self.name))
         check_data = cr.fetchone()
         if not check_data:
-            raise TypeError(
-                _(
-                    "geometry_columns table seems to be corrupted."
-                    " SRID check is not possible"
-                )
-            )
+            raise TypeError(_("geometry_columns table seems to be corrupted." " SRID check is not possible"))
         if check_data[0] != self.srid:
             raise TypeError(
                 _(
-                    "Reprojection of column is not implemented."
-                    " We can not change srid %(srid)s to %(data)s",
+                    "Reprojection of column is not implemented." " We can not change srid %(srid)s to %(data)s",
                     srid=self.srid,
                     data=check_data[0],
                 )
@@ -147,8 +142,7 @@ class GeoField(fields.Field):
         elif check_data[1] != self.geo_type.upper():
             raise TypeError(
                 _(
-                    "Geo type modification is not implemented."
-                    " We can not change type %(data)s to %(geo_type)s",
+                    "Geo type modification is not implemented." " We can not change type %(data)s to %(geo_type)s",
                     data=check_data[1],
                     geo_type=self.geo_type.upper(),
                 )
@@ -208,9 +202,7 @@ class GeoField(fields.Field):
             if column["is_nullable"] == "NO":
                 sql.drop_not_null(model._cr, model._table, self.name)
             sql.rename_column(model._cr, model._table, self.name, newname(i))
-            sql.create_column(
-                model._cr, model._table, self.name, self.column_type[1], self.string
-            )
+            sql.create_column(model._cr, model._table, self.name, self.column_type[1], self.string)
 
 
 class GeoLine(GeoField):
