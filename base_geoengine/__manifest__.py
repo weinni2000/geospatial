@@ -22,6 +22,9 @@
     "assets": {
         "web.assets_backend": [
             "base_geoengine/static/src/js/**/*",
+            "base_geoengine/static/src/js/views/**/*",
+            "base_geoengine/static/src/js/views/geoengine/**/*",
+            "base_geoengine/static/src/js/views/geoengine/geoengine_record/geoengine_record.xml",
             "base_geoengine/static/src/css/style.css",
             "web/static/src/libs/fontawesome/css/font-awesome.css",
             ("include", "web._assets_helpers"),

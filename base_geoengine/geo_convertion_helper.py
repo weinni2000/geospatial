@@ -16,6 +16,7 @@ except ImportError:
 
 def value_to_shape(value, use_wkb=False):
     """Transforms input into a Shapely object"""
+
     if not value:
         return wkt.loads("GEOMETRYCOLLECTION EMPTY")
     if isinstance(value, str):
@@ -34,9 +35,4 @@ def value_to_shape(value, use_wkb=False):
         else:
             return wkt.loads(value.wkt)
     else:
-        raise TypeError(
-            _(
-                "Write/create/search geo type must be wkt/geojson "
-                "string or must respond to wkt"
-            )
-        )
+        raise TypeError(_("Write/create/search geo type must be wkt/geojson " "string or must respond to wkt"))

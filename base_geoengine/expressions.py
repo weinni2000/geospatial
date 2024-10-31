@@ -43,6 +43,22 @@ term_operators_list = list(TERM_OPERATORS)
 for op in GEO_OPERATORS:
     term_operators_list.append(op)
 
+GEO_SQL_OPERATORS = {
+    "geo_greater": SQL(">"),
+    "geo_lesser": SQL("<"),
+    "geo_equal": SQL("="),
+    "geo_touch": SQL("ST_Touches"),
+    "geo_within": SQL("ST_Within"),
+    "geo_contains": SQL("ST_Contains"),
+    "geo_intersect": SQL("ST_Intersects"),
+}
+
+sql_operators_list = list(GEO_SQL_OPERATORS)
+for op in GEO_SQL_OPERATORS:
+    sql_operators_list.append(op)
+
+expression.SQL_OPERATORS = tuple(sql_operators_list)
+
 expression.TERM_OPERATORS = tuple(term_operators_list)
 TERM_OPERATORS = expression.TERM_OPERATORS
 
@@ -101,10 +117,14 @@ FALSE_DOMAIN = [FALSE_LEAF]
 
 _logger = logging.getLogger(__name__)
 
-nikmod = """
-def __leaf_to_sql(self, leaf, model, alias):
+
+def __leaf_to_sql(leaf, model, alias):
     # This method has been monkey patched in order to be able to include
     # geo_operators into the Odoo search method.
+
+    # import wdb
+
+    # wdb.set_trace()
 
     left, operator, right = leaf
     if isinstance(leaf, list | tuple):
@@ -152,15 +172,23 @@ def __leaf_to_sql(self, leaf, model, alias):
                 query = " AND ".join(sub_queries)
             else:
                 query = get_geo_func(current_operator, operator, left, right, params, model._table)
-            return SQL(query, *params)
-        return original__leaf_to_sql(self, leaf=leaf, model=model, alias=alias)
-"""
+            # import wdb
+
+            # wdb.set_trace()
+            entpackt = tuple(params)
+            new_query = query % entpackt
+
+            return SQL(new_query)
+        # return original__leaf_to_sql(self, leaf=leaf, model=model, alias=alias)
 
 
 def get_geo_func(current_operator, operator, left, right, params, table):
     """
     This method will call the SQL query corresponding to the requested geo operator
     """
+    # import wdb
+
+    # wdb.set_trace()
     match operator:
         case "geo_greater":
             query = current_operator.get_geo_greater_sql(table, left, right, params)
@@ -931,6 +959,9 @@ def parse(self):  # noqa: C901
 
     # stack of SQL expressions
     result_stack = []
+    # import wdb
+
+    # wdb.set_trace()
 
     while stack:
         # Get the next leaf to process
@@ -964,61 +995,6 @@ def parse(self):  # noqa: C901
         # nikmod
 
         left, operator, right = leaf
-        if operator == "geo_intersect":
-            pass
-            # print("test")
-            # import wdb
-
-            # wdb.set_trace()
-
-        if isinstance(leaf, list | tuple):
-            current_field = model._fields.get(left)
-            current_operator = GeoOperator(current_field)
-            if current_field and isinstance(current_field, GeoField):
-                params = []
-                if isinstance(right, dict):
-                    # We are having indirect geo_operator like (‘geom’, ‘geo_...’,
-                    # {‘res.zip.poly’: [‘id’, ‘in’, [1,2,3]] })
-                    ref_search = right
-                    sub_queries = []
-                    for key in ref_search:
-                        i = key.rfind(".")
-                        rel_model = key[0:i]
-                        rel_col = key[i + 1 :]
-                        rel_model = model.env[rel_model]
-                        # we compute the attributes search on spatial rel
-                        if ref_search[key]:
-                            rel_alias = (
-                                rel_model._table + "_" + "".join(random.choices(string.ascii_lowercase, k=5))
-                            )
-                            rel_query = where_calc(
-                                rel_model,
-                                ref_search[key],
-                                active_test=True,
-                                alias=rel_alias,
-                            )
-                            model._apply_ir_rules(rel_query, "read")
-                            if operator == "geo_equal":
-                                rel_query.add_where(
-                                    f'"{alias}"."{left}" {GEO_OPERATORS[operator]} ' f"{rel_alias}.{rel_col}"
-                                )
-                            elif operator in ("geo_greater", "geo_lesser"):
-                                rel_query.add_where(
-                                    f"ST_Area({alias}.{left}) {GEO_OPERATORS[operator]}"
-                                    f" ST_Area({rel_alias}.{rel_col})"
-                                )
-                            else:
-                                rel_query.add_where(
-                                    f'{GEO_OPERATORS[operator]}("{alias}"."{left}", ' f"{rel_alias}.{rel_col})"
-                                )
-
-                            subquery, subparams = rel_query.subselect("1")
-                            sub_queries.append(f"EXISTS({subquery})")
-                            params += subparams
-                    query = " AND ".join(sub_queries)
-                else:
-                    query = get_geo_func(current_operator, operator, left, right, params, model._table)
-                return SQL(query, *params)
 
         path = left.split(".", 1)
 
@@ -1517,6 +1493,20 @@ def parse(self):  # noqa: C901
         # -> manage translatable fields
         # -------------------------------------------------
 
+        elif field.type in [
+            "geo_polygon",
+            "geo_multi_polygon",
+            "geo_point",
+            "geo_multi_point",
+            "geo_line",
+            "geo_multi_line",
+        ]:
+            # leaf
+            # import wdb
+
+            # wdb.set_trace()
+            test = __leaf_to_sql(leaf, model, alias)
+            push_result(test)
         else:
             if field.type == "datetime" and right:
                 if isinstance(right, str) and len(right) == 10:
@@ -1584,6 +1574,10 @@ def parse(self):  # noqa: C901
     # END OF PARSING FULL DOMAIN
     # -> put result in self.result and self.query
     # ----------------------------------------
+
+    # import wdb
+
+    # wdb.set_trace()
 
     [self.result] = result_stack
     self.query.add_where(self.result)
