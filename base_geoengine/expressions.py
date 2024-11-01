@@ -53,11 +53,7 @@ GEO_SQL_OPERATORS = {
     "geo_intersect": SQL("ST_Intersects"),
 }
 
-sql_operators_list = list(GEO_SQL_OPERATORS)
-for op in GEO_SQL_OPERATORS:
-    sql_operators_list.append(op)
-
-expression.SQL_OPERATORS = tuple(sql_operators_list)
+expression.SQL_OPERATORS.update(GEO_SQL_OPERATORS)
 
 expression.TERM_OPERATORS = tuple(term_operators_list)
 TERM_OPERATORS = expression.TERM_OPERATORS

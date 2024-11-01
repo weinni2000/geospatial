@@ -38,21 +38,20 @@ export class GeoengineRecord extends Component {
             t-att-tabindex="props.record.model.useSampleModel ? -1 : 0"
         >
             <t
-t-call="{{ special }}"
+t-call="{{ templates[this.constructor.INFO_BOX_ATTRIBUTE] }}"
 t-call-context="this.renderingContext"
             />
         </div>
         `;
-    //
+    //        T-call="{{ special }}"
+    // t-call-context="this.renderingContext"
     //
     setup() {
         this.user = user;
         const {Compiler, templates} = this.props;
         const ViewCompiler = Compiler || this.constructor.Compiler;
 
-        this.templates_A = useViewCompiler(ViewCompiler, templates);
-        this.special_old = templates[this.constructor.INFO_BOX_ATTRIBUTE];
-        this.special = this.templates_A[this.constructor.INFO_BOX_ATTRIBUTE];
+        this.templates = useViewCompiler(ViewCompiler, templates);
 
         this.createRecord(this.props);
         onWillUpdateProps(this.createRecord);
@@ -63,6 +62,23 @@ t-call-context="this.renderingContext"
      * @param {*} props
      */
     createRecord(props) {
+        const {record} = props;
+        this.record = Object.create(null); // Kills the Chrome debugger
+        // this.record = {}; // Object.create(null); kills the Chrome debugger
+        for (const fieldName in record._values) {
+            this.record[fieldName] = {
+                get value() {
+                    return getValue(record, fieldName);
+                },
+            };
+        }
+    }
+
+    /**
+     * Create record with formatter.
+     * @param {*} props
+     */
+    createRecord_old(props) {
         const {record} = props;
         this.record = Object.create(null);
         for (const fieldName in record._values) {
