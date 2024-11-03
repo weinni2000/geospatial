@@ -2,7 +2,7 @@ jsdoc = require("eslint-plugin-jsdoc");
 
 const config = [{
     plugins: {
-      jsdoc,
+        jsdoc,
     },
 
     languageOptions: {
@@ -16,6 +16,11 @@ const config = [{
             openerp: "readonly",
             owl: "readonly",
             luxon: "readonly",
+            document: "readonly",
+            ol: "writable",
+            localStorage: "readonly",
+            chroma: "readonly",
+            geostats: "readonly",
         },
 
         ecmaVersion: 2024,

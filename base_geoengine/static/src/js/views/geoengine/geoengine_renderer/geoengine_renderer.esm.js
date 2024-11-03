@@ -1,5 +1,3 @@
-/** @odoo-module */
-
 /**
  * Copyright 2023 ACSONE SA/NV
  */
@@ -14,6 +12,7 @@ import {
     reactive,
     useState,
 } from "@odoo/owl";
+
 import {GeoengineRecord} from "../geoengine_record/geoengine_record.esm";
 import {LayersPanel} from "../layers_panel/layers_panel.esm";
 import {RecordsPanel} from "../records_panel/records_panel.esm";
@@ -28,6 +27,7 @@ import {parseXML} from "@web/core/utils/xml";
 import {rasterLayersStore} from "../../../raster_layers_store.esm";
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
+import {user} from "@web/core/user";
 import {vectorLayersStore} from "../../../vector_layers_store.esm";
 
 /* CONSTANTS */
@@ -57,7 +57,7 @@ export class GeoengineRenderer extends Component {
 
         this.orm = useService("orm");
         this.view = useService("view");
-        this.user = useService("user");
+        this.user = user;
         this.fields = useService("field");
 
         // For related model we need to load all the service needed by RelationalModel
@@ -65,17 +65,11 @@ export class GeoengineRenderer extends Component {
         for (const key of RelationalModel.services) {
             this.services[key] = useService(key);
         }
+        this.ol = undefined;
 
         onWillStart(async () =>
             Promise.all([
-                loadBundle({
-                    jsLibs: [
-                        "/base_geoengine/static/lib/ol-7.2.2/ol.js",
-                        "/base_geoengine/static/lib/chromajs-2.4.2/chroma.js",
-                        "/base_geoengine/static/lib/geostats-2.0.0/geostats.js",
-                    ],
-                    cssLibs: ["/base_geoengine/static/lib/geostats-2.0.0/geostats.css"],
-                }),
+                loadBundle("base_geoengine.assets_jsLibs_geoengine"),
                 this.loadVectorModel(),
                 (this.isGeoengineAdmin = await this.user.hasGroup(
                     "base_geoengine.group_geoengine_admin"
@@ -1101,6 +1095,7 @@ export class GeoengineRenderer extends Component {
                 if (val) {
                     return chroma(val).alpha(opacity).css();
                 }
+                return null;
             });
         } else {
             colors = scale
@@ -1120,6 +1115,7 @@ export class GeoengineRenderer extends Component {
                 if (label_text === false) {
                     label_text = "";
                 }
+                /* eslint-disable-next-line no-undef */
                 console.log(feature.get("attributes").id);
                 styles_map[colors[color_idx]][0].text_.text_ = label_text.toString();
                 return styles_map[colors[color_idx]];

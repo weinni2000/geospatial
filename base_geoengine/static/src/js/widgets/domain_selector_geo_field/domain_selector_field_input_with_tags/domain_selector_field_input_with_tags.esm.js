@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import {Component, useRef} from "@odoo/owl";
 
 export class DomainSelectorFieldInputWithTags extends Component {

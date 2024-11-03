@@ -1,5 +1,3 @@
-/** @odoo-module */
-
 /**
  * This is method is called when an operator changes its value.
  * @param {*} action

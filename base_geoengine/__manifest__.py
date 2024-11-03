@@ -4,7 +4,7 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 {
     "name": "Geospatial support for Odoo",
-    "version": "17.0.1.0.0",
+    "version": "18.0.1.0.0",
     "category": "GeoBI",
     "author": "Camptocamp,ACSONE SA/NV,Odoo Community Association (OCA)",
     "license": "AGPL-3",
@@ -22,13 +22,21 @@
     "assets": {
         "web.assets_backend": [
             "base_geoengine/static/src/js/**/*",
+            "base_geoengine/static/src/js/views/**/*",
+            "base_geoengine/static/src/js/views/geoengine/**/*",
             "base_geoengine/static/src/css/style.css",
             "web/static/src/libs/fontawesome/css/font-awesome.css",
             ("include", "web._assets_helpers"),
             "web/static/src/scss/pre_variables.scss",
             "web/static/lib/bootstrap/scss/_variables.scss",
             ("include", "web._assets_bootstrap"),
-        ]
+        ],
+        "base_geoengine.assets_jsLibs_geoengine": [
+            "/base_geoengine/static/lib/ol-7.2.2/ol.js",
+            "/base_geoengine/static/lib/chromajs-2.4.2/chroma.js",
+            "/base_geoengine/static/lib/geostats-2.0.0/geostats.js",
+            "/base_geoengine/static/lib/geostats-2.0.0/geostats.css",
+        ],
     },
     "external_dependencies": {"python": ["shapely", "geojson"]},
     "installable": True,
