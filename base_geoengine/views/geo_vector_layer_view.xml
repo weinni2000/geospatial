@@ -152,10 +152,10 @@
     </record>
 
     <record model="ir.ui.view" id="geo_vector_view_tree">
-        <field name="name">geoengine.vector.layer.tree</field>
+        <field name="name">geoengine.vector.layer.list</field>
         <field name="model">geoengine.vector.layer</field>
         <field name="arch" type="xml">
-            <tree>
+            <list>
                 <field name="name" select="1" />
                 <field name="geo_repr" select="1" />
                 <field name="classification" select="1" />
@@ -163,7 +163,7 @@
                 <field name="attribute_field_id" select="1" />
                 <field name="active_on_startup" />
                 <field name="sequence" />
-            </tree>
+            </list>
         </field>
     </record>
 
