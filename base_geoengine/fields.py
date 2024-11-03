@@ -43,7 +43,7 @@ class GeoField(fields.Field):
             postgis_geom_type += "ZM"
         return ("geometry", f"geometry({postgis_geom_type}, {self.srid})")
 
-    def convert_to_column(self, value, record, values=None):
+    def convert_to_column(self, value, record, values=None, validate=True):
         """Convert value to database format
 
         value can be geojson, wkt, shapely geometry object.

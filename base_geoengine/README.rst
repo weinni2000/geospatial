@@ -17,13 +17,13 @@ Geospatial support for Odoo
     :target: http://www.gnu.org/licenses/agpl-3.0-standalone.html
     :alt: License: AGPL-3
 .. |badge3| image:: https://img.shields.io/badge/github-OCA%2Fgeospatial-lightgray.png?logo=github
-    :target: https://github.com/OCA/geospatial/tree/17.0/base_geoengine
+    :target: https://github.com/OCA/geospatial/tree/18.0/base_geoengine
     :alt: OCA/geospatial
 .. |badge4| image:: https://img.shields.io/badge/weblate-Translate%20me-F47D42.png
-    :target: https://translation.odoo-community.org/projects/geospatial-17-0/geospatial-17-0-base_geoengine
+    :target: https://translation.odoo-community.org/projects/geospatial-18-0/geospatial-18-0-base_geoengine
     :alt: Translate me on Weblate
 .. |badge5| image:: https://img.shields.io/badge/runboat-Try%20me-875A7B.png
-    :target: https://runboat.odoo-community.org/builds?repo=OCA/geospatial&target_branch=17.0
+    :target: https://runboat.odoo-community.org/builds?repo=OCA/geospatial&target_branch=18.0
     :alt: Try me on Runboat
 
 |badge1| |badge2| |badge3| |badge4| |badge5|
@@ -31,10 +31,10 @@ Geospatial support for Odoo
 GeoEngine is an Odoo module that adds spatial/GIS capabilites to Odoo.
 It will allow you to :
 
--  Visualize and query your business information on map
--  Perform GeoBI and spatial query
--  Configure your spatial layers and spatial datasources
--  Extend Odoo models with spatial columns
+- Visualize and query your business information on map
+- Perform GeoBI and spatial query
+- Configure your spatial layers and spatial datasources
+- Extend Odoo models with spatial columns
 
 GeoEngine relies on `OpenLayers <http://openlayers.org>`__ and
 `PostgGIS <http://postgis.refractions.net/>`__ technologies.
@@ -68,8 +68,8 @@ On Ubuntu:
 
 The module also requires two additional python libs:
 
--  `Shapely <http://pypi.python.org/pypi/Shapely>`__
--  `geojson <http://pypi.python.org/pypi/geojson>`__
+- `Shapely <http://pypi.python.org/pypi/Shapely>`__
+- `geojson <http://pypi.python.org/pypi/geojson>`__
 
 When you will install the module this two additional libs will be
 installed.
@@ -174,14 +174,14 @@ Changelog
 16.0.1.0.0 (2023-03-20)
 -----------------------
 
--  LayerSwitcher has been removed as it was not really practical. A
-   LayerPanel is now active.
--  The geo_search method is now deprecated and replaced by the standard
-   odoo search method.
--  The widget "geo_edit_map" attribute is no longer necessary as the
-   field is automatically detected by his type. We can also provide an
-   option attribute that allows us to pass an opacity and a color as
-   parameters.
+- LayerSwitcher has been removed as it was not really practical. A
+  LayerPanel is now active.
+- The geo_search method is now deprecated and replaced by the standard
+  odoo search method.
+- The widget "geo_edit_map" attribute is no longer necessary as the
+  field is automatically detected by his type. We can also provide an
+  option attribute that allows us to pass an opacity and a color as
+  parameters.
 
 .. code:: xml
 
@@ -193,15 +193,15 @@ Changelog
        </notebook>
    </form>
 
--  The method geo_search is now deprecated. We now need to use the
-   standard odoo search method.
+- The method geo_search is now deprecated. We now need to use the
+  standard odoo search method.
 
 .. code:: python
 
    obj.search([("the_point","geo_intersect",{"dummy.zip.the_geom": [("id", "=", rec.id)]})])
 
--  We can now pass to the geoengine view a template to display the
-   information we want to see when clicking on a feature.
+- We can now pass to the geoengine view a template to display the
+  information we want to see when clicking on a feature.
 
 .. code:: xml
 
@@ -223,8 +223,8 @@ Changelog
        </templates>
    </geoengine>
 
--  We can now pass a model to use to a layer to display other
-   information on the map.
+- We can now pass a model to use to a layer to display other information
+  on the map.
 
 .. code:: xml
 
@@ -241,7 +241,7 @@ Changelog
        <field name="layer_opacity">0.8</field>
    </record>
 
--  There is some new features in the LayerPanel.
+- There is some new features in the LayerPanel.
 
 1. If you are logged in as an admin, you have the possibility to edit
    the layer by clicking on the edit button. This will open a dialog
@@ -254,25 +254,24 @@ Changelog
    the layers by sliding them over each other. If you are logged in as a
    user, changes will not be persisted in the database.
 
--  Widget domain is now implemented for geo field This means that the
-   geo-operators are also implemented and that there is the possibility
-   to add a sub-domain. If we want to add a domain that includes all the
-   records that are displayed in the geoengine view (active_ids). We can
-   use the two new operators : "in active_ids" and "not in active_ids".
-   These will automatically replace the marker with ids. Note that the
-   widget will indicate that the domain is invalid because of the
-   marker.
--  Creation of the RecordsPanel. This panel allows you to retrieve all
-   active records. You can click on record to get the movement to the
-   selected record. Two magnifying glass are also available. You can
-   click on the left one to zoom on the record. You can click on the
-   right one to get the original zoom.
--  A search bar is also available. It allows you to perform a search
-   into the RecordsPanel.
--  A button to open/close the panels is also available.
--  The module has been translated in French.
--  Now you can now make the geoengine view editable. Simply add editable
-   attribute in the geoengine view.
+- Widget domain is now implemented for geo field This means that the
+  geo-operators are also implemented and that there is the possibility
+  to add a sub-domain. If we want to add a domain that includes all the
+  records that are displayed in the geoengine view (active_ids). We can
+  use the two new operators : "in active_ids" and "not in active_ids".
+  These will automatically replace the marker with ids. Note that the
+  widget will indicate that the domain is invalid because of the marker.
+- Creation of the RecordsPanel. This panel allows you to retrieve all
+  active records. You can click on record to get the movement to the
+  selected record. Two magnifying glass are also available. You can
+  click on the left one to zoom on the record. You can click on the
+  right one to get the original zoom.
+- A search bar is also available. It allows you to perform a search into
+  the RecordsPanel.
+- A button to open/close the panels is also available.
+- The module has been translated in French.
+- Now you can now make the geoengine view editable. Simply add editable
+  attribute in the geoengine view.
 
 .. code:: xml
 
@@ -303,7 +302,7 @@ Bug Tracker
 Bugs are tracked on `GitHub Issues <https://github.com/OCA/geospatial/issues>`_.
 In case of trouble, please check there if your issue has already been reported.
 If you spotted it first, help us to smash it by providing a detailed and welcomed
-`feedback <https://github.com/OCA/geospatial/issues/new?body=module:%20base_geoengine%0Aversion:%2017.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
+`feedback <https://github.com/OCA/geospatial/issues/new?body=module:%20base_geoengine%0Aversion:%2018.0%0A%0A**Steps%20to%20reproduce**%0A-%20...%0A%0A**Current%20behavior**%0A%0A**Expected%20behavior**>`_.
 
 Do not contact contributors directly about support or help with technical issues.
 
@@ -319,33 +318,33 @@ Authors
 Contributors
 ------------
 
--  Nicolas Bessi <nicolas.bessi@camptocamp.com>
--  Frederic Junod <frederic.junod@camptocamp.com>
--  Yannick Payot <yannick.payot@camptocamp.com>
--  Sandy Carter <sandy.carter@savoirfairelinux.com>
--  Laurent Mignon <laurent.mignon@acsone.eu>
--  Jonathan Nemry <jonathan.nemry@acsone.eu>
--  David Lasley <dave@dlasley.net>
--  Daniel Reis <dgreis@sapo.pt>
--  Matthieu Dietrich <matthieu.dietrich@camptocamp.com>
--  Alan Ramos <alan.ramos@jarsa.com.mx>
--  Damien Crier <damien.crier@camptocamp.com>
--  Cyril Gaudin <cyril.gaudin@camptocamp.com>
--  Pierre Verkest <pverkest@anybox.fr>
--  Benjamin Willig <benjamin.willig@acsone.eu>
--  Devendra Kavthekar <dkatodoo@gmail.com>
--  Emanuel Cino <ecino@compassion.ch>
--  Thomas Nowicki <thomas.nowicki@camptocamp.com>
--  Alexandre Saunier <alexandre.saunier@camptocamp.com>
--  Sandip Mangukiya <smangukiya@opensourceintegrators.com>
--  Samuel Kouff <s.kouff@student.helmo.be>
--  `APSL-Nagarro <https://www.apsl.tech>`__:
+- Nicolas Bessi <nicolas.bessi@camptocamp.com>
+- Frederic Junod <frederic.junod@camptocamp.com>
+- Yannick Payot <yannick.payot@camptocamp.com>
+- Sandy Carter <sandy.carter@savoirfairelinux.com>
+- Laurent Mignon <laurent.mignon@acsone.eu>
+- Jonathan Nemry <jonathan.nemry@acsone.eu>
+- David Lasley <dave@dlasley.net>
+- Daniel Reis <dgreis@sapo.pt>
+- Matthieu Dietrich <matthieu.dietrich@camptocamp.com>
+- Alan Ramos <alan.ramos@jarsa.com.mx>
+- Damien Crier <damien.crier@camptocamp.com>
+- Cyril Gaudin <cyril.gaudin@camptocamp.com>
+- Pierre Verkest <pverkest@anybox.fr>
+- Benjamin Willig <benjamin.willig@acsone.eu>
+- Devendra Kavthekar <dkatodoo@gmail.com>
+- Emanuel Cino <ecino@compassion.ch>
+- Thomas Nowicki <thomas.nowicki@camptocamp.com>
+- Alexandre Saunier <alexandre.saunier@camptocamp.com>
+- Sandip Mangukiya <smangukiya@opensourceintegrators.com>
+- Samuel Kouff <s.kouff@student.helmo.be>
+- `APSL-Nagarro <https://www.apsl.tech>`__:
 
-   -  Antoni Marroig <amarroig@apsl.net>
-   -  Miquel Alzanillas <malzanillas@apsl.net>
+  - Antoni Marroig <amarroig@apsl.net>
+  - Miquel Alzanillas <malzanillas@apsl.net>
 
--  Red Butay <>
--  Sergio Sancho <sersanchus@gmail.com>
+- Red Butay <>
+- Sergio Sancho <sersanchus@gmail.com>
 
 Maintainers
 -----------
@@ -360,6 +359,6 @@ OCA, or the Odoo Community Association, is a nonprofit organization whose
 mission is to support the collaborative development of Odoo features and
 promote its widespread use.
 
-This module is part of the `OCA/geospatial <https://github.com/OCA/geospatial/tree/17.0/base_geoengine>`_ project on GitHub.
+This module is part of the `OCA/geospatial <https://github.com/OCA/geospatial/tree/18.0/base_geoengine>`_ project on GitHub.
 
 You are welcome to contribute. To learn how please visit https://odoo-community.org/page/Contribute.
