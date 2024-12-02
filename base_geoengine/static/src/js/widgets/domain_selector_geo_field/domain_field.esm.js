@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 import {DomainField, domainField} from "@web/views/fields/domain/domain_field";
 
 export class DomainFieldExtend extends DomainField {
@@ -21,6 +19,7 @@ export class DomainFieldExtend extends DomainField {
                 [domain],
                 {context: this.getContext(props)}
             );
+            /* eslint-disable no-unused-vars */
         } catch (_e) {
             // WOWL TODO: rethrow error when not the expected type
             Object.assign(this.state, {recordCount: 0, isValid: false});

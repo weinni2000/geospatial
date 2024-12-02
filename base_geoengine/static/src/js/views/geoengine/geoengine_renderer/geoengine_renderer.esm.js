@@ -1,12 +1,7 @@
-/** @odoo-module */
-
 /**
  * Copyright 2023 ACSONE SA/NV
  */
-import {
-    addFieldDependencies,
-    extractFieldsFromArchInfo,
-} from "@web/model/relational_model/utils";
+
 import {
     Component,
     mount,
@@ -17,19 +12,21 @@ import {
     reactive,
     useState,
 } from "@odoo/owl";
-import {loadBundle, templates} from "@web/core/assets";
-import {evaluateExpr} from "@web/core/py_js/py";
 import {GeoengineRecord} from "../geoengine_record/geoengine_record.esm";
 import {LayersPanel} from "../layers_panel/layers_panel.esm";
 import {RecordsPanel} from "../records_panel/records_panel.esm";
 import {RelationalModel} from "@web/model/relational_model/relational_model";
-
+import {
+    addFieldDependencies,
+    extractFieldsFromArchInfo,
+} from "@web/model/relational_model/utils";
+import {evaluateExpr} from "@web/core/py_js/py";
+import {loadBundle, templates} from "@web/core/assets";
 import {parseXML} from "@web/core/utils/xml";
 import {rasterLayersStore} from "../../../raster_layers_store.esm";
 import {registry} from "@web/core/registry";
 import {useService} from "@web/core/utils/hooks";
 import {user} from "@web/core/user";
-
 import {vectorLayersStore} from "../../../vector_layers_store.esm";
 
 /* CONSTANTS */
@@ -71,17 +68,7 @@ export class GeoengineRenderer extends Component {
 
         onWillStart(async () =>
             Promise.all([
-                loadBundle(
-                    "base_geoengine.assets_jsLibs_geoengine"
-                    // {
-                    // jsLibs: [
-                    //    "/base_geoengine/static/lib/ol-7.2.2/ol.js",
-                    //    "/base_geoengine/static/lib/chromajs-2.4.2/chroma.js",
-                    //    "/base_geoengine/static/lib/geostats-2.0.0/geostats.js",
-                    // ],
-                    // cssLibs: ["/base_geoengine/static/lib/geostats-2.0.0/geostats.css"],
-                    // }
-                ),
+                loadBundle("base_geoengine.assets_jsLibs_geoengine"),
                 this.loadVectorModel(),
                 (this.isGeoengineAdmin = await this.user.hasGroup(
                     "base_geoengine.group_geoengine_admin"
@@ -1127,9 +1114,6 @@ export class GeoengineRenderer extends Component {
                 if (label_text === false) {
                     label_text = "";
                 }
-
-                // Nikmod
-                // console.log(feature.get("attributes").id);
                 styles_map[colors[color_idx]][0].text_.text_ = label_text.toString();
                 return styles_map[colors[color_idx]];
             },

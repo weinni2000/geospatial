@@ -1,5 +1,3 @@
-/** @odoo-module */
-
 /**
  * Copyright 2023 ACSONE SA/NV
  */
@@ -12,7 +10,6 @@ import {visitXML} from "@web/core/utils/xml";
 
 export const INFO_BOX_ATTRIBUTE = "info_box";
 
-// NIKMOD
 function archParseBoolean(str, trueIfEmpty = false) {
     return str ? !/^false|0$/i.test(str) : trueIfEmpty;
 }

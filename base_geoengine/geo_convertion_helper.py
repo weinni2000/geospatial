@@ -16,7 +16,6 @@ except ImportError:
 
 def value_to_shape(value, use_wkb=False):
     """Transforms input into a Shapely object"""
-
     if not value:
         return wkt.loads("GEOMETRYCOLLECTION EMPTY")
     if isinstance(value, str):

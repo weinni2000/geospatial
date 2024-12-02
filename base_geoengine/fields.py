@@ -116,7 +116,6 @@ class GeoField(fields.Field):
                     geom_type=shape.geom_type.lower(),
                     geo_type=self.geo_type.lower(),
                 )
-                # NIKMOD
                 raise TypeError(msg)
         return shape
 

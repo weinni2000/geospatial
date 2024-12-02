@@ -9,15 +9,30 @@ import random
 import reprlib
 import string
 import traceback
-import warnings
 from datetime import date, datetime, time
 
 import pytz
 
-import odoo.modules
 from odoo.models import READ_GROUP_NUMBER_GRANULARITY, check_property_field_value_name
 from odoo.osv import expression
-from odoo.osv.expression import SQL_OPERATORS, TERM_OPERATORS
+from odoo.osv.expression import (
+    AND,
+    AND_OPERATOR,
+    ANY_IN,
+    FALSE_LEAF,
+    NEGATIVE_TERM_OPERATORS,
+    NOT_OPERATOR,
+    OR,
+    SQL_OPERATORS,
+    TERM_OPERATORS,
+    TERM_OPERATORS_NEGATION,
+    TRUE_LEAF,
+    WILDCARD_OPERATORS,
+    check_leaf,
+    domain_combine_anies,
+    is_operator,
+    normalize_leaf,
+)
 from odoo.tools import SQL, Query, get_lang
 from odoo.tools.sql import (
     pattern_to_translated_trigram_pattern,
@@ -27,8 +42,7 @@ from odoo.tools.sql import (
 from .fields import GeoField
 from .geo_operators import GeoOperator
 
-# not present in odoo 18.0
-# original__leaf_to_sql = expression.expression._expression__leaf_to_sql
+_logger = logging.getLogger(__name__)
 
 GEO_OPERATORS = {
     "geo_greater": ">",
@@ -43,6 +57,9 @@ term_operators_list = list(TERM_OPERATORS)
 for op in GEO_OPERATORS:
     term_operators_list.append(op)
 
+expression.TERM_OPERATORS = tuple(term_operators_list)
+TERM_OPERATORS = expression.TERM_OPERATORS
+
 GEO_SQL_OPERATORS = {
     "geo_greater": SQL(">"),
     "geo_lesser": SQL("<"),
@@ -55,73 +72,10 @@ GEO_SQL_OPERATORS = {
 
 expression.SQL_OPERATORS.update(GEO_SQL_OPERATORS)
 
-expression.TERM_OPERATORS = tuple(term_operators_list)
-TERM_OPERATORS = expression.TERM_OPERATORS
 
-# Domain operators.
-NOT_OPERATOR = "!"
-OR_OPERATOR = "|"
-AND_OPERATOR = "&"
-DOMAIN_OPERATORS = (NOT_OPERATOR, OR_OPERATOR, AND_OPERATOR)
-
-# List of available term operators. It is also possible to use the '<>'
-# operator, which is strictly the same as '!='; the later should be preferred
-# for consistency. This list doesn't contain '<>' as it is simplified to '!='
-# by the normalize_operator() function (so later part of the code deals with
-# only one representation).
-# TERM_OPERATORS = ('=', '!=', '<=', '<', '>', '>=', '=?', '=like', '=ilike',
-#                  'like', 'not like', 'ilike', 'not ilike', 'in', 'not in',
-#                  'child_of', 'parent_of', 'any', 'not any')
-
-# A subset of the above operators, with a 'negative' semantic. When the
-# expressions 'in NEGATIVE_TERM_OPERATORS' or 'not in NEGATIVE_TERM_OPERATORS' are used in the code
-# below, this doesn't necessarily mean that any of those NEGATIVE_TERM_OPERATORS is
-# legal in the processed term.
-NEGATIVE_TERM_OPERATORS = ("!=", "not like", "not ilike", "not in")
-
-# Negation of domain expressions
-DOMAIN_OPERATORS_NEGATION = {
-    AND_OPERATOR: OR_OPERATOR,
-    OR_OPERATOR: AND_OPERATOR,
-}
-TERM_OPERATORS_NEGATION = {
-    "<": ">=",
-    ">": "<=",
-    "<=": ">",
-    ">=": "<",
-    "=": "!=",
-    "!=": "=",
-    "in": "not in",
-    "like": "not like",
-    "ilike": "not ilike",
-    "not in": "in",
-    "not like": "like",
-    "not ilike": "ilike",
-    "any": "not any",
-    "not any": "any",
-}
-
-WILDCARD_OPERATORS = ("like", "ilike", "not like", "not ilike")
-
-ANY_IN = {"any": "in", "not any": "not in"}
-
-TRUE_LEAF = (1, "=", 1)
-FALSE_LEAF = (0, "=", 1)
-
-TRUE_DOMAIN = [TRUE_LEAF]
-FALSE_DOMAIN = [FALSE_LEAF]
-
-_logger = logging.getLogger(__name__)
-
-
-def __leaf_to_sql(leaf, model, alias):
+def __leaf_to_sql(leaf, model, alias):  # noqa: C901
     # This method has been monkey patched in order to be able to include
     # geo_operators into the Odoo search method.
-
-    # import wdb
-
-    # wdb.set_trace()
-
     left, operator, right = leaf
     if isinstance(leaf, list | tuple):
         current_field = model._fields.get(left)
@@ -141,6 +95,7 @@ def __leaf_to_sql(leaf, model, alias):
                     # we compute the attributes search on spatial rel
                     if ref_search[key]:
                         rel_alias = rel_model._table + "_" + "".join(random.choices(string.ascii_lowercase, k=5))
+
                         rel_query = where_calc(
                             rel_model,
                             ref_search[key],
@@ -168,23 +123,41 @@ def __leaf_to_sql(leaf, model, alias):
                 query = " AND ".join(sub_queries)
             else:
                 query = get_geo_func(current_operator, operator, left, right, params, model._table)
-            # import wdb
 
-            # wdb.set_trace()
-            entpackt = tuple(params)
-            new_query = query % entpackt
+            for idx, param in enumerate(params):
+                if isinstance(param, str):
+                    if "%" in param:  # or "POINT" in param:
+                        param = param.replace("%", "%%")
+                        params[idx] = f"'{param}'"
+                        continue
+                    try:
+                        param = int(param)
+                        continue
+                    except ValueError as e:
+                        _logger.info(e)
 
-            return SQL(new_query)
-        # return original__leaf_to_sql(self, leaf=leaf, model=model, alias=alias)
+                if isinstance(param, tuple):
+                    entries = []
+                    is_number = False
+                    for entry in param:
+                        try:
+                            int(entry)
+                            is_number = True
+                        except ValueError as e:
+                            _logger.info(e)
+                        entries.append(entry)
+                    if is_number:
+                        params[idx] = f'({",".join(entries)})'
+                    else:
+                        entries_escaped = '","'.join(entries)
+                        params[idx] = f'("{entries_escaped}")'
+            return SQL(query % tuple(params))
 
 
 def get_geo_func(current_operator, operator, left, right, params, table):
     """
     This method will call the SQL query corresponding to the requested geo operator
     """
-    # import wdb
-
-    # wdb.set_trace()
     match operator:
         case "geo_greater":
             query = current_operator.get_geo_greater_sql(table, left, right, params)
@@ -221,581 +194,6 @@ def where_calc(model, domain, active_test=True, alias=None):
     if domain:
         return expression.expression(domain, model, alias=alias, query=query).query
     return query
-
-
-# NIKMOD
-# expression.expression._expression__leaf_to_sql = __leaf_to_sql
-
-
-# ORIG
-# --------------------------------------------------
-# Generic domain manipulation
-# --------------------------------------------------
-
-
-def normalize_domain(domain):
-    """Returns a normalized version of ``domain_expr``, where all implicit '&' operators
-    have been made explicit. One property of normalized domain expressions is that they
-    can be easily combined together as if they were single domain components.
-    """
-    assert isinstance(
-        domain, list | tuple
-    ), "Domains to normalize must have a 'domain' form: a list or tuple of domain components"
-    if not domain:
-        return [TRUE_LEAF]
-    result = []
-    expected = 1  # expected number of expressions
-    op_arity = {NOT_OPERATOR: 1, AND_OPERATOR: 2, OR_OPERATOR: 2}
-    for token in domain:
-        if expected == 0:  # more than expected, like in [A, B]
-            result[0:0] = [AND_OPERATOR]  # put an extra '&' in front
-            expected = 1
-        if isinstance(token, list | tuple):  # domain term
-            expected -= 1
-            if len(token) == 3 and token[1] in ("any", "not any"):
-                token = (token[0], token[1], normalize_domain(token[2]))
-            else:
-                token = tuple(token)
-        else:
-            expected += op_arity.get(token, 0) - 1
-        result.append(token)
-    if expected:
-        raise ValueError(f"Domain {domain} is syntactically not correct.")
-    return result
-
-
-def is_false(model, domain):
-    """Return whether ``domain`` is logically equivalent to false."""
-    # use three-valued logic: -1 is false, 0 is unknown, +1 is true
-    stack = []
-    for token in reversed(normalize_domain(domain)):
-        if token == "&":
-            stack.append(min(stack.pop(), stack.pop()))
-        elif token == "|":
-            stack.append(max(stack.pop(), stack.pop()))
-        elif token == "!":
-            stack.append(-stack.pop())
-        elif token == TRUE_LEAF:
-            stack.append(+1)
-        elif token == FALSE_LEAF:
-            stack.append(-1)
-        elif token[1] == "in" and not (isinstance(token[2], Query) or token[2]):
-            stack.append(-1)
-        elif token[1] == "not in" and not (isinstance(token[2], Query) or token[2]):
-            stack.append(+1)
-        else:
-            stack.append(0)
-    return stack.pop() == -1
-
-
-def combine(operator, unit, zero, domains):
-    """Returns a new domain expression where all domain components from ``domains``
-    have been added together using the binary operator ``operator``.
-
-    It is guaranteed to return a normalized domain.
-
-    :param operator:
-    :param unit: the identity element of the domains "set" with regard to the operation
-                 performed by ``operator``, i.e the domain component ``i`` which, when
-                 combined with any domain ``x`` via ``operator``, yields ``x``.
-                 E.g. [(1,'=',1)] is the typical unit for AND_OPERATOR: adding it
-                 to any domain component gives the same domain.
-    :param zero: the absorbing element of the domains "set" with regard to the operation
-                 performed by ``operator``, i.e the domain component ``z`` which, when
-                 combined with any domain ``x`` via ``operator``, yields ``z``.
-                 E.g. [(1,'=',1)] is the typical zero for OR_OPERATOR: as soon as
-                 you see it in a domain component the resulting domain is the zero.
-    :param domains: a list of normalized domains.
-    """
-    result = []
-    count = 0
-    for domain in domains:
-        domain = normalize_domain(domain)
-        if domain == unit:
-            continue
-        if domain == zero:
-            return zero
-        result += domain
-        count += 1
-    result = [operator] * (count - 1) + result
-    return result or unit
-
-
-def AND(domains):
-    """AND([D1,D2,...]) returns a domain representing D1 and D2 and ..."""
-    return combine(AND_OPERATOR, [TRUE_LEAF], [FALSE_LEAF], domains)
-
-
-def OR(domains):
-    """OR([D1,D2,...]) returns a domain representing D1 or D2 or ..."""
-    return combine(OR_OPERATOR, [FALSE_LEAF], [TRUE_LEAF], domains)
-
-
-def distribute_not(domain):
-    """Distribute any '!' domain operators found inside a normalized domain.
-
-    Because we don't use SQL semantic for processing a 'left not in right'
-    query (i.e. our 'not in' is not simply translated to a SQL 'not in'),
-    it means that a '! left in right' can not be simply processed
-    by model._condition_to_sql by first emitting code for 'left in right' then wrapping
-    the result with 'not (...)', as it would result in a 'not in' at the SQL
-    level.
-
-    This function is thus responsible for pushing any '!' domain operators
-    inside the terms themselves. For example::
-
-         ['!','&',('user_id','=',4),('partner_id','in',[1,2])]
-            will be turned into:
-         ['|',('user_id','!=',4),('partner_id','not in',[1,2])]
-
-    """
-
-    # This is an iterative version of a recursive function that split domain
-    # into subdomains, processes them and combine the results. The "stack" below
-    # represents the recursive calls to be done.
-    result = []
-    stack = [False]
-
-    for token in domain:
-        negate = stack.pop()
-        # negate tells whether the subdomain starting with token must be negated
-        if is_leaf(token):
-            if negate:
-                left, operator, right = token
-                if operator in TERM_OPERATORS_NEGATION and (isinstance(left, int) or "." not in left):
-                    # rewrite using the negated operator, except for relationship traversal
-                    # because not ('a.b', '=', x)
-                    # should become ('a', 'not any', ('b', '=', x))
-                    if token in (TRUE_LEAF, FALSE_LEAF):
-                        result.append(FALSE_LEAF if token == TRUE_LEAF else TRUE_LEAF)
-                    else:
-                        result.append((left, TERM_OPERATORS_NEGATION[operator], right))
-                else:
-                    result.append(NOT_OPERATOR)
-                    result.append(token)
-            else:
-                result.append(token)
-        elif token == NOT_OPERATOR:
-            stack.append(not negate)
-        elif token in DOMAIN_OPERATORS_NEGATION:
-            result.append(DOMAIN_OPERATORS_NEGATION[token] if negate else token)
-            stack.append(negate)
-            stack.append(negate)
-        else:
-            result.append(token)
-
-    return result
-
-
-def _anyfy_leaves(domain, model):
-    """Return the domain where all conditions on field sequences have been
-    transformed into 'any' conditions.
-    """
-    result = []
-    for item in domain:
-        if is_operator(item):
-            result.append(item)
-            continue
-
-        left, operator, right = item = tuple(item)
-        if is_boolean(item):
-            result.append(item)
-            continue
-
-        path = left.split(".", 1)
-        field = model._fields.get(path[0])
-        if not field:
-            raise ValueError(f"Invalid field {model._name}.{path[0]} in leaf {item}")
-        if len(path) > 1 and field.relational:  # skip properties
-            subdomain = [(path[1], operator, right)]
-            comodel = model.env[field.comodel_name]
-            result.append((path[0], "any", _anyfy_leaves(subdomain, comodel)))
-        elif operator in ("any", "not any"):
-            comodel = model.env[field.comodel_name]
-            result.append((left, operator, _anyfy_leaves(right, comodel)))
-        else:
-            result.append(item)
-
-    return result
-
-
-def _tree_from_domain(domain):
-    """Return the domain as a tree, with the following structure::
-
-        <tree> ::= ('?', <boolean>)
-                |  ('!', <tree>)
-                |  ('&', <tree>, <tree>, ...)
-                |  ('|', <tree>, <tree>, ...)
-                |  (<comparator>, <fname>, <value>)
-
-    By construction, AND (``&``) and OR (``|``) nodes are n-ary and have at
-    least two children.  Moreover, AND nodes (respectively OR nodes) do not have
-    AND nodes (resp. OR nodes) in their children.
-    """
-    stack = []
-    for item in reversed(domain):
-        if item == "!":
-            stack.append(_tree_not(stack.pop()))
-        elif item == "&":
-            stack.append(_tree_and((stack.pop(), stack.pop())))
-        elif item == "|":
-            stack.append(_tree_or((stack.pop(), stack.pop())))
-        elif item == TRUE_LEAF:
-            stack.append(("?", True))
-        elif item == FALSE_LEAF:
-            stack.append(("?", False))
-        else:
-            lhs, comparator, rhs = item
-            if comparator in ("any", "not any"):
-                rhs = _tree_from_domain(rhs)
-            stack.append((comparator, lhs, rhs))
-    return _tree_and(reversed(stack))
-
-
-def _tree_not(tree):
-    """Negate a tree node."""
-    if tree[0] == "=?":
-        # already update operator '=?' here, so that '!' is distributed correctly
-        assert len(tree) == 3
-        if tree[2]:
-            tree = ("=", tree[1], tree[2])
-        else:
-            return ("?", False)
-    if tree[0] == "?":
-        return ("?", not tree[1])
-    if tree[0] == "!":
-        return tree[1]
-    if tree[0] == "&":
-        return ("|", *(_tree_not(item) for item in tree[1:]))
-    if tree[0] == "|":
-        return ("&", *(_tree_not(item) for item in tree[1:]))
-    if tree[0] in TERM_OPERATORS_NEGATION:
-        return (TERM_OPERATORS_NEGATION[tree[0]], tree[1], tree[2])
-    return ("!", tree)
-
-
-def _tree_and(trees):
-    """Return the tree given by AND-ing all the given trees."""
-    children = []
-    for tree in trees:
-        if tree == ("?", True):
-            pass
-        elif tree == ("?", False):
-            return tree
-        elif tree[0] == "&":
-            children.extend(tree[1:])
-        else:
-            children.append(tree)
-    if not children:
-        return ("?", True)
-    if len(children) == 1:
-        return children[0]
-    return ("&", *children)
-
-
-def _tree_or(trees):
-    """Return the tree given by OR-ing all the given trees."""
-    children = []
-    for tree in trees:
-        if tree == ("?", True):
-            return tree
-        elif tree == ("?", False):
-            pass
-        elif tree[0] == "|":
-            children.extend(tree[1:])
-        else:
-            children.append(tree)
-    if not children:
-        return ("?", False)
-    if len(children) == 1:
-        return children[0]
-    return ("|", *children)
-
-
-def _tree_combine_anies(tree, model):  # noqa: C901
-    """Return the tree given by recursively merging 'any' and 'not any' nodes,
-    according to the following logical equivalences:
-
-     * (fname ANY dom1) OR (fname ANY dom2) == (fname ANY (dom1 OR dom2))
-
-     * (fname NOT ANY dom1) AND (fname NOT ANY dom2) == (fname NOT ANY (dom1 OR dom2))
-
-    We also merge 'any' and 'not any' nodes according to the following logical
-    equivalences *for many2one fields only*:
-
-     * (fname NOT ANY dom1) OR (fname NOT ANY dom2) == (fname NOT ANY (dom1 AND dom2))
-
-     * (fname ANY dom1) AND (fname ANY dom2) == (fname ANY (dom1 AND dom2))
-
-    """
-
-    # first proceed recursively on subtrees
-    if tree[0] == "!":
-        tree = _tree_not(_tree_combine_anies(tree[1], model))
-    elif tree[0] == "&":
-        temp = [_tree_combine_anies(subtree, model) for subtree in tree[1:]]
-        tree = _tree_and(temp)
-    elif tree[0] == "|":
-        temp = [_tree_combine_anies(subtree, model) for subtree in tree[1:]]
-        tree = _tree_or(temp)
-
-    # proceed recursively on subdomains
-    if tree[0] == "any":
-        field = model._fields[tree[1]]
-        comodel = model.env[field.comodel_name]
-        return ("any", tree[1], _tree_combine_anies(tree[2], comodel))
-
-    if tree[0] == "not any":
-        field = model._fields[tree[1]]
-        comodel = model.env[field.comodel_name]
-        return ("not any", tree[1], _tree_combine_anies(tree[2], comodel))
-
-    if tree[0] not in ("&", "|"):
-        return tree
-
-    # tree is either an '&' or an '|' tree; group leaves using 'any' or 'not any'
-    children = []
-    any_children = collections.defaultdict(list)
-    not_any_children = collections.defaultdict(list)
-    for subtree in tree[1:]:
-        if subtree[0] == "any":
-            any_children[subtree[1]].append(subtree[2])
-        elif subtree[0] == "not any":
-            not_any_children[subtree[1]].append(subtree[2])
-        else:
-            children.append(subtree)
-
-    if tree[0] == "&":
-        # merge subdomains where possible
-        for fname, subtrees in any_children.items():
-            field = model._fields[fname]
-            comodel = model.env[field.comodel_name]
-            if field.type == "many2one" and len(subtrees) > 1:
-                # (fname ANY dom1) AND (fname ANY dom2) == (fname ANY (dom1 AND dom2))
-                children.append(("any", fname, _tree_combine_anies(_tree_and(subtrees), comodel)))
-            else:
-                for subtree in subtrees:
-                    children.append(("any", fname, _tree_combine_anies(subtree, comodel)))
-
-        for fname, subtrees in not_any_children.items():
-            # (fname NOT ANY dom1)
-            # AND (fname NOT ANY dom2) == (fname NOT ANY (dom1 OR dom2))
-            field = model._fields[fname]
-            comodel = model.env[field.comodel_name]
-            children.append(("not any", fname, _tree_combine_anies(_tree_or(subtrees), comodel)))
-
-        return _tree_and(children)
-
-    else:
-        # merge subdomains where possible
-        for fname, subtrees in any_children.items():
-            # (fname ANY dom1) OR (fname ANY dom2) == (fname ANY (dom1 OR dom2))
-            field = model._fields[fname]
-            comodel = model.env[field.comodel_name]
-            children.append(("any", fname, _tree_combine_anies(_tree_or(subtrees), comodel)))
-
-        for fname, subtrees in not_any_children.items():
-            field = model._fields[fname]
-            comodel = model.env[field.comodel_name]
-            if field.type == "many2one" and len(subtrees) > 1:
-                # (fname NOT ANY dom1) OR
-                # (fname NOT ANY dom2) == (fname NOT ANY (dom1 AND dom2))
-                children.append(
-                    (
-                        "not any",
-                        fname,
-                        _tree_combine_anies(_tree_and(subtrees), comodel),
-                    )
-                )
-            else:
-                for subtree in subtrees:
-                    children.append(("not any", fname, _tree_combine_anies(subtree, comodel)))
-
-        return _tree_or(children)
-
-
-def _tree_as_domain(tree):
-    """Return the domain list represented by the given domain tree."""
-
-    def _flatten(tree):
-        if tree[0] == "?":
-            yield TRUE_LEAF if tree[1] else FALSE_LEAF
-        elif tree[0] == "!":
-            yield tree[0]
-            yield from _flatten(tree[1])
-        elif tree[0] in ("&", "|"):
-            yield from tree[0] * (len(tree) - 2)
-            for subtree in tree[1:]:
-                yield from _flatten(subtree)
-        elif tree[0] in ("any", "not any"):
-            yield (tree[1], tree[0], _tree_as_domain(tree[2]))
-        else:
-            yield (tree[1], tree[0], tree[2])
-
-    return list(_flatten(tree))
-
-
-def domain_combine_anies(domain, model):
-    """Return a domain equivalent to the given one where 'any' and 'not any'
-    conditions have been combined in order to generate less subqueries.
-    """
-    domain_any = _anyfy_leaves(domain, model)
-    tree = _tree_from_domain(domain_any)
-    merged_tree = _tree_combine_anies(tree, model)
-    new_domain = _tree_as_domain(merged_tree)
-    return new_domain
-
-
-def prettify_domain(domain, pre_indent=0):
-    """
-    Pretty-format a domain into a string by separating each leaf on a
-    separated line and by including some indentation. Works with ``any``
-    and ``not any`` too. The domain must be normalized.
-
-    :param list domain: a normalized domain
-    :param int pre_indent: (optinal) a starting indentation level
-    :return: the domain prettified
-    :rtype: str
-    """
-
-    # The ``stack`` is a stack of layers, each layer accumulates the
-    # ``terms`` (leaves/operators) that share a same indentation
-    # level (the depth of the layer inside the stack). ``left_count``
-    # tracks how many terms should still appear on each layer before the
-    # layer is considered complete.
-    #
-    # When a layer is completed, it is removed from the stack and
-    # commited, i.e. its terms added to the ``commits`` list along with
-    # the indentation for those terms.
-    #
-    # When a new operator is added to the layer terms, the current layer
-    # is commited (but not removed from the stack if there are still
-    # some terms that must be added) and a new (empty) layer is added on
-    # top of the stack.
-    #
-    # When the domain has been fully iterated, the commits are used to
-    # craft the final string. All terms are indented according to their
-    # commit indentation level and separated by a new line.
-
-    stack = [{"left_count": 1, "terms": []}]
-    commits = []
-
-    for term in domain:
-        top = stack[-1]
-
-        if is_operator(term):
-            # when a same operator appears twice in a row, we want to
-            # include the second one on the same line as the former one
-            if not top["terms"] and commits and (commits[-1]["terms"] or [""])[-1].startswith(repr(term)):
-                commits[-1]["terms"][-1] += f", {term!r}"  # hack
-                top["left_count"] += 0 if term == NOT_OPERATOR else 1
-            else:
-                commits.append({"indent": len(stack) - 1, "terms": top["terms"] + [repr(term)]})
-                top["terms"] = []
-                top["left_count"] -= 1
-                stack.append(
-                    {
-                        "left_count": 1 if term == NOT_OPERATOR else 2,
-                        "terms": [],
-                    }
-                )
-                top = stack[-1]
-        elif term[1] in ("any", "not any"):
-            top["terms"].append(
-                f"({term[0]!r}, {term[1]!r}, " f"{prettify_domain(term[2], pre_indent + len(stack) - 1)})"
-            )
-            top["left_count"] -= 1
-        else:
-            top["terms"].append(repr(term))
-            top["left_count"] -= 1
-
-        if not top["left_count"]:
-            commits.append({"indent": len(stack) - 1, "terms": top["terms"]})
-            stack.pop()
-
-    return "[{}]".format(
-        f",\n{'    ' * pre_indent}".join(
-            [f"{'    ' * commit['indent']}{term}" for commit in commits for term in commit["terms"]]
-        )
-    )
-
-
-# --------------------------------------------------
-# Generic leaf manipulation
-# --------------------------------------------------
-
-
-def normalize_leaf(element):
-    """Change a term's operator to some canonical form, simplifying later
-    processing."""
-    if not is_leaf(element):
-        return element
-    left, operator, right = element
-    original = operator
-    operator = operator.lower()
-    if operator == "<>":
-        operator = "!="
-    if isinstance(right, bool) and operator in ("in", "not in"):
-        _logger.warning(
-            "The domain term '%(domain_term)s' should use the '=' or '!=' operator."
-            % {"domain_term": ((left, original, right),)}
-        )
-        operator = "=" if operator == "in" else "!="
-    if isinstance(right, list | tuple) and operator in ("=", "!="):
-        _logger.warning(
-            "The domain term '%(domain_term)s' should use the 'in' or 'not in' operator."
-            % {"domain_term": ((left, original, right),)}
-        )
-        operator = "in" if operator == "=" else "not in"
-    return left, operator, right
-
-
-def is_operator(element):
-    """Test whether an object is a valid domain operator."""
-    return isinstance(element, str) and element in DOMAIN_OPERATORS
-
-
-def is_leaf(element):
-    """Test whether an object is a valid domain term:
-
-    - is a list or tuple
-    - with 3 elements
-    - second element if a valid op
-
-    :param tuple element: a leaf in form (left, operator, right)
-
-    Note: OLD TODO change the share wizard to use this function.
-    """
-    INTERNAL_OPS = TERM_OPERATORS + ("<>",)
-    return (
-        (isinstance(element, tuple) or isinstance(element, list))
-        and len(element) == 3
-        and element[1] in INTERNAL_OPS
-        and ((isinstance(element[0], str) and element[0]) or tuple(element) in (TRUE_LEAF, FALSE_LEAF))
-    )
-
-
-def is_boolean(element):
-    return element == TRUE_LEAF or element == FALSE_LEAF
-
-
-def check_leaf(element):
-    if not is_operator(element) and not is_leaf(element):
-        raise ValueError("Invalid leaf %(element)s" % {"element": str(element)})
-
-
-# --------------------------------------------------
-# SQL utils
-# --------------------------------------------------
-
-
-def get_unaccent_wrapper(cr):
-    warnings.warn(
-        "Since 18.0, deprecated method, use env.registry.unaccent instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return odoo.modules.registry.Registry(cr.dbname).unaccent
 
 
 def parse(self):  # noqa: C901
@@ -955,9 +353,6 @@ def parse(self):  # noqa: C901
 
     # stack of SQL expressions
     result_stack = []
-    # import wdb
-
-    # wdb.set_trace()
 
     while stack:
         # Get the next leaf to process
@@ -987,8 +382,6 @@ def parse(self):  # noqa: C901
             continue
 
         # Get working variables
-
-        # nikmod
 
         left, operator, right = leaf
 
@@ -1140,7 +533,8 @@ def parse(self):  # noqa: C901
                 raise ValueError(
                     f"Error when processing the field {field!r}, "
                     f"the granularity {path[1]} is not supported. "
-                    'Only {", ".join(READ_GROUP_NUMBER_GRANULARITY.keys())} are supported'
+                    "Only {', '.join(READ_GROUP_NUMBER_GRANULARITY.keys())}"
+                    " are supported"
                 )
             sql_field = model._field_to_sql(alias, field.name, self.query)
             if model._context.get("tz") in pytz.all_timezones_set and field.type == "datetime":
@@ -1209,7 +603,7 @@ def parse(self):  # noqa: C901
             push(("id", ANY_IN[operator], sql), model, alias)
 
         elif operator in ("any", "not any") and field.store and field.auto_join:
-            raise NotImplementedError("auto_join attribute not supported on field %(field)s" % {"field": field})
+            raise NotImplementedError(f"auto_join attribute not supported on field {field}")
 
         elif operator in ("any", "not any") and field.type == "many2one":
             right_ids = comodel._search(right)
@@ -1497,12 +891,7 @@ def parse(self):  # noqa: C901
             "geo_line",
             "geo_multi_line",
         ]:
-            # leaf
-            # import wdb
-
-            # wdb.set_trace()
-            test = __leaf_to_sql(leaf, model, alias)
-            push_result(test)
+            push_result(__leaf_to_sql(leaf, model, alias))
         else:
             if field.type == "datetime" and right:
                 if isinstance(right, str) and len(right) == 10:
@@ -1570,11 +959,6 @@ def parse(self):  # noqa: C901
     # END OF PARSING FULL DOMAIN
     # -> put result in self.result and self.query
     # ----------------------------------------
-
-    # import wdb
-
-    # wdb.set_trace()
-
     [self.result] = result_stack
     self.query.add_where(self.result)
 

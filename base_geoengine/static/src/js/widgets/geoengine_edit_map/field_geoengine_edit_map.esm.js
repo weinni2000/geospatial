@@ -1,5 +1,3 @@
-/** @odoo-module **/
-
 /**
  * Copyright 2023 ACSONE SA/NV
  */
@@ -18,18 +16,7 @@ export class FieldGeoEngineEditMap extends Component {
         this.ol = undefined;
 
         onWillStart(() =>
-            Promise.all([
-                loadBundle(
-                    "base_geoengine.assets_jsLibs_geoengine"
-                    /*
-                        {
-                            jsLibs: [
-                                "/base_geoengine/static/lib/ol-7.2.2/ol.js",
-                                "/base_geoengine/static/lib/chromajs-2.4.2/chroma.js",
-                            ],
-                        }*/
-                ),
-            ])
+            Promise.all([loadBundle("base_geoengine.assets_jsLibs_geoengine")])
         );
 
         // Is executed when component is mounted.

@@ -6,6 +6,7 @@ class GeoModelTest(models.Model):
     """GeoModel for testing"""
 
     _name = "geo.model.test"
+    _description = "Geoengine demo model"
     name = fields.Char("GeoModelTest")
     geo_multi_polygon = fields.GeoMultiPolygon()
     geo_polygon = fields.GeoPolygon()

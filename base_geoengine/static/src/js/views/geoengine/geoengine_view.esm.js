@@ -1,5 +1,3 @@
-/** @odoo-module */
-
 /**
  * Copyright 2023 ACSONE SA/NV
  */

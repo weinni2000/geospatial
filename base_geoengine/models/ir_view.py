@@ -12,19 +12,14 @@ class IrUIView(models.Model):
         ondelete={"geoengine": "cascade"},
     )
 
-    raster_layer_ids = fields.One2many(
-        "geoengine.raster.layer", "view_id", "Raster layers", required=False
-    )
+    raster_layer_ids = fields.One2many("geoengine.raster.layer", "view_id", "Raster layers", required=False)
 
-    vector_layer_ids = fields.One2many(
-        "geoengine.vector.layer", "view_id", "Vector layers", required=True
-    )
+    vector_layer_ids = fields.One2many("geoengine.vector.layer", "view_id", "Vector layers", required=True)
 
     projection = fields.Char(default="EPSG:3857", required=True)
     default_extent = fields.Char(
         "Default map extent",
-        default="-123164.85222423, 5574694.9538936, 1578017.6490538,"
-        " 6186191.1800898",
+        default="-123164.85222423, 5574694.9538936, 1578017.6490538," " 6186191.1800898",
     )
     default_zoom = fields.Integer("Default map zoom")
     restricted_extent = fields.Char("Restricted map extent")
@@ -33,3 +28,10 @@ class IrUIView(models.Model):
         if view_type == "geoengine":
             return True
         return super()._is_qweb_based_view(view_type)
+
+    def _get_view_info(self):
+        view_info = super()._get_view_info()
+        view_info["geoengine"] = {
+            "icon": "fa fa-globe",
+        }
+        return view_info

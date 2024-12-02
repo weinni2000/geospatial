@@ -1,16 +1,14 @@
-/** @odoo-module */
-
 /**
  * Copyright 2023 ACSONE SA/NV
  */
-import {Component, onWillUpdateProps, xml} from "@odoo/owl";
-import {Field} from "@web/views/fields/field";
+
 import {GeoengineCompiler} from "../geoengine_compiler.esm";
 import {INFO_BOX_ATTRIBUTE} from "../geoengine_arch_parser.esm";
 import {registry} from "@web/core/registry";
-import {standardFieldProps} from "@web/views/fields/standard_field_props";
 import {useViewCompiler} from "@web/views/view_compiler";
+import {Component, onWillUpdateProps, xml} from "@odoo/owl";
 import {user} from "@web/core/user";
+import {Field} from "@web/views/fields/field";
 
 const formatters = registry.category("formatters");
 
@@ -25,14 +23,7 @@ export class GeoengineRecord extends Component {
     /**
      * Setup the record by compiling the arch and the info-box template.
      */
-    static props = {...standardFieldProps};
-
-    static components = {
-        Field,
-    };
     static template = xml`
-<p t-out="special">hello</p>
-
     <div
             t-att-data-id="props.record.id"
             t-att-tabindex="props.record.model.useSampleModel ? -1 : 0"
@@ -43,9 +34,7 @@ t-call-context="this.renderingContext"
             />
         </div>
         `;
-    //        T-call="{{ special }}"
-    // t-call-context="this.renderingContext"
-    //
+
     setup() {
         this.user = user;
         const {Compiler, templates} = this.props;
@@ -62,23 +51,6 @@ t-call-context="this.renderingContext"
      * @param {*} props
      */
     createRecord(props) {
-        const {record} = props;
-        this.record = Object.create(null); // Kills the Chrome debugger
-        // this.record = {}; // Object.create(null); kills the Chrome debugger
-        for (const fieldName in record._values) {
-            this.record[fieldName] = {
-                get value() {
-                    return getValue(record, fieldName);
-                },
-            };
-        }
-    }
-
-    /**
-     * Create record with formatter.
-     * @param {*} props
-     */
-    createRecord_old(props) {
         const {record} = props;
         this.record = Object.create(null);
         for (const fieldName in record._values) {
@@ -103,5 +75,5 @@ t-call-context="this.renderingContext"
     }
 }
 GeoengineRecord.Compiler = GeoengineCompiler;
-// GeoengineRecord.components = { Field };
+GeoengineRecord.components = {Field};
 GeoengineRecord.INFO_BOX_ATTRIBUTE = INFO_BOX_ATTRIBUTE;
