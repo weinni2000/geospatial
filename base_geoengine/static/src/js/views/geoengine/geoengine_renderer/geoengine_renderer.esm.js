@@ -503,7 +503,7 @@ export class GeoengineRenderer extends Component {
                     const model = this.models.find(
                         (el) => el.model.resModel === feature.get("model")
                     );
-                    this.mountGeoengineRecord({
+                    this.old_stuff2 = this.mountGeoengineRecord({
                         popup,
                         archInfo: model.archInfo,
                         templateDocs: model.archInfo.templateDocs,
@@ -511,7 +511,7 @@ export class GeoengineRenderer extends Component {
                         attributes,
                     });
                 } else {
-                    this.mountGeoengineRecord({
+                    this.old_stuff2 = this.mountGeoengineRecord({
                         popup,
                         archInfo: this.props.archInfo,
                         templateDocs: this.props.archInfo.templateDocs,
@@ -550,7 +550,7 @@ export class GeoengineRenderer extends Component {
             record === undefined
                 ? model.records.find((element) => element._values.id === attributes.id)
                 : record;
-        mount(GeoengineRecord, popup, {
+        this.old_stuff = mount(GeoengineRecord, popup, {
             env: this.env,
             props: {
                 archInfo,
@@ -596,10 +596,21 @@ export class GeoengineRenderer extends Component {
     }
 
     getOriginalZoom() {
-        var extent = this.vectorLayersResult
-            .find((res) => res.values_.visible === true)
-            .getSource()
-            .getExtent();
+        var extent = [Infinity, Infinity, -Infinity, -Infinity];
+        // <NIKMOD>
+        /* eslint-disable no-unused-vars */
+        try {
+            var pre_extent = this.vectorLayersResult.find((res) => {
+                return res.values_.visible === true;
+            });
+
+            var extent = pre_extent.getSource().getExtent();
+        } catch (error) {
+            // Console.log("Error");
+            // Extent = false;
+        }
+        // </NIKMOD>
+
         var infinite_extent = [Infinity, Infinity, -Infinity, -Infinity];
         if (JSON.stringify(extent) === JSON.stringify(infinite_extent)) {
             extent = [-13360714.671289, 5314503.622, 8284735.328607, 7099727.320865];
@@ -643,20 +654,24 @@ export class GeoengineRenderer extends Component {
      * when the user changes raster layers.
      */
     onRasterLayerChanged() {
-        this.map
-            .getLayers()
-            .getArray()
-            .find((layer) => layer.get("title") === "Base maps")
-            .getLayers()
-            .getArray()
-            .forEach((layer) => {
-                this.rasterLayersStore.rastersLayers.forEach((raster) => {
-                    if (raster.name === layer.get("title")) {
-                        layer.setVisible(raster.isVisible);
-                        layer.setOpacity(raster.opacity);
-                    }
+        try {
+            this.map
+                .getLayers()
+                .getArray()
+                .find((layer) => layer.get("title") === "Base maps")
+                .getLayers()
+                .getArray()
+                .forEach((layer) => {
+                    this.rasterLayersStore.rastersLayers.forEach((raster) => {
+                        if (raster.name === layer.get("title")) {
+                            layer.setVisible(raster.isVisible);
+                            layer.setOpacity(raster.opacity);
+                        }
+                    });
                 });
-            });
+
+            /* eslint-disable no-unused-vars */
+        } catch (error) {}
     }
 
     /**

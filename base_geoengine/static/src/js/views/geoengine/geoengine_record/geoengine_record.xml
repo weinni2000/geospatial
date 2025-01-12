@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <templates xml:space="preserve">
     <t t-name="base_geoengine.GeoengineRecord">
+        <p>Upper</p>
+
         <div
             t-att-data-id="props.record.id"
             t-att-tabindex="props.record.model.useSampleModel ? -1 : 0"

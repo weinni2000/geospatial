@@ -24,15 +24,24 @@ export class GeoengineRecord extends Component {
      * Setup the record by compiling the arch and the info-box template.
      */
     static template = xml`
+    <!--
+    <p>hello from original2</p>
+    <p t-out="props.record.data.name"></p>
+    -->
+
     <div
-            t-att-data-id="props.record.id"
+            t-att-data-id="props.record.data.id"
             t-att-tabindex="props.record.model.useSampleModel ? -1 : 0"
         >
+
             <t
 t-call="{{ templates[this.constructor.INFO_BOX_ATTRIBUTE] }}"
 t-call-context="this.renderingContext"
             />
+
+
         </div>
+
         `;
 
     setup() {
@@ -41,7 +50,6 @@ t-call-context="this.renderingContext"
         const ViewCompiler = Compiler || this.constructor.Compiler;
 
         this.templates = useViewCompiler(ViewCompiler, templates);
-
         this.createRecord(this.props);
         onWillUpdateProps(this.createRecord);
     }
@@ -51,12 +59,13 @@ t-call-context="this.renderingContext"
      * @param {*} props
      */
     createRecord(props) {
-        const {record} = props;
-        this.record = Object.create(null);
-        for (const fieldName in record._values) {
-            this.record[fieldName] = {
+        // Const record = props.record;
+        // this.record = Object.create(null); Breaks in Dev Mode
+        // this.props.record = Object.create({});
+        for (const fieldName in props.record._values) {
+            this.props.record[fieldName] = {
                 get value() {
-                    return getValue(record, fieldName);
+                    return getValue(props.record, fieldName);
                 },
             };
         }

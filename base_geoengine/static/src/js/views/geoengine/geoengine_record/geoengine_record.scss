@@ -1,0 +1,9 @@
+div#popup-content > div {
+    visibility: hidden;
+    display: none;
+}
+
+div#popup-content > div:last-child {
+    visibility: visible;
+    display: block;
+}

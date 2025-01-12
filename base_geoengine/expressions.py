@@ -147,6 +147,8 @@ def __leaf_to_sql(leaf, model, alias):  # noqa: C901
                             _logger.info(e)
                         entries.append(entry)
                     if is_number:
+                        # fix
+                        entries = [str(entry) for entry in entries]
                         params[idx] = f'({",".join(entries)})'
                     else:
                         entries_escaped = '","'.join(entries)

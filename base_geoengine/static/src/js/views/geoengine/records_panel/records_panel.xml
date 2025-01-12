@@ -69,7 +69,8 @@
             <div t-else="" class="d-flex justify-content-center text-900">
                 <span class="title-panel">Records (<t
                     t-esc="props.list.records.length"
-                />)</span>
+                />
+)</span>
             </div>
         </div>
     </t>
