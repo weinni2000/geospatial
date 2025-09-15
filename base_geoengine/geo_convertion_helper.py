@@ -4,6 +4,8 @@ import logging
 
 from odoo import _
 
+logger = logging.getLogger(__name__)
+
 try:
     import geojson
     from shapely import wkb, wkt
@@ -27,7 +29,15 @@ def value_to_shape(value, use_wkb=False):
         elif use_wkb:
             return wkb.loads(value, hex=True)
         else:
-            return wkt.loads(value)
+            # <NIKMOD>
+            # 'POINT(0.0 0.0)'
+            try:
+                return wkt.loads(value)
+            except Exception as e:
+                logger.warning(_("Failed to parse WKT: %s", e))
+                empty = "POINT(0.0 0.0)"
+                return wkt.loads(empty)
+                # </NIKMOD>
     elif hasattr(value, "wkt"):
         if isinstance(value, BaseGeometry):
             return value
