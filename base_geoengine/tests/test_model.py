@@ -474,7 +474,7 @@ class TestModel(TransactionCase):
 
     def test_search_contains_for_retails_21(self):
         zip_item = self.env["dummy.zip"]
-        retails = self.env["retail.machine"].search([("name", "ilike", "21")])
+        retails = self.env["retail.machine"].search([("name", "ilike", "21")], limit=1)
         result = zip_item.search([("the_geom", "geo_contains", retails.the_point)])
         self.assertEqual(1, len(result))
         self.assertEqual(result.city, "Mollens (VD))")
@@ -505,7 +505,7 @@ class TestModel(TransactionCase):
 
     def test_search_within_for_retails_21(self):
         retails = self.env["retail.machine"]
-        zip_item = self.env["dummy.zip"].search([("city", "ilike", "Mollens (VD))")])
+        zip_item = self.env["dummy.zip"].search([("city", "ilike", "Mollens (VD))")], limit=1)
         result = retails.search(
             [("name", "ilike", "21"), ("the_point", "geo_within", zip_item.the_geom)]
         )
