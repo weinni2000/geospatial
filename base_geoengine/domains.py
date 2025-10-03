@@ -4,9 +4,11 @@ from odoo.orm.domains import DomainCondition, NEGATIVE_CONDITION_OPERATORS, Quer
 from odoo.orm.identifiers import NewId
 from odoo import fields
 from odoo.orm.models import BaseModel
+import contextlib
 import logging
 import warnings
 import typing
+from odoo.orm.domains import OptimizationLevel
 
 if typing.TYPE_CHECKING:
     from collections.abc import Callable, Collection, Iterable
@@ -18,13 +20,13 @@ if typing.TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 GEO_OPERATORS = frozenset([
-    "geo_greater", ">",
-    "geo_lesser", "<",
-    "geo_equal", "=",
-    "geo_touch", "ST_Touches",
-    "geo_within", "ST_Within",
-    "geo_contains", "ST_Contains",
-    "geo_intersect", "ST_Intersects",
+    "geo_greater",
+    "geo_lesser",
+    "geo_equal",
+    "geo_touch",
+    "geo_within",
+    "geo_contains",
+    "geo_intersect",
 ])
 
 def checked(self) -> DomainCondition:
@@ -65,8 +67,51 @@ def checked(self) -> DomainCondition:
         return DomainCondition(self.field_expr, operator, value)
     return self
 
-DomainCondition.checked = checked
+def _to_sql(self, model: BaseModel, alias: str, query: Query) -> SQL:
+    """Enhanced _to_sql that handles geospatial operators."""
+    field_expr, operator, value = self.field_expr, self.operator, self.value
+    
+    # Only handle geospatial operators here, delegate everything else to original method
+    if operator in GEO_OPERATORS:
+        # Ensure geospatial conditions are fully optimized
+        assert self._opt_level >= OptimizationLevel.FULL, \
+            f"Must fully optimize before generating the query {(field_expr, operator, value)}"
+        
+        field = self._field(model)
+        model._check_field_access(field, 'read')
+        return field.condition_to_sql(field_expr, operator, value, model, alias, query)
+    
+    # For all other operators, use the original method
+    return original__to_sql(self, model, alias, query)
 
-# merge 2 frozen sets Domain.STANDARD_CONDITION_OPERATORS and GEO_OPERATORS
-#domains.CONDITION_OPERATORS = domains.CONDITION_OPERATORS.union(GEO_OPERATORS)
-print("test")
+def _optimize_step(self, model: BaseModel, level: OptimizationLevel) -> Domain:
+    """Optimization step for geospatial operators."""
+    # For geospatial operators, we need to handle them specially during optimization
+    field_expr, operator, value = self.field_expr, self.operator, self.value
+    
+    # If this is a geospatial operator, mark it as optimized at FULL level
+    if operator in GEO_OPERATORS:
+        # Perform basic validation and normalization
+        with contextlib.suppress(Exception):
+            field = self._field(model)
+            # Basic geospatial operator validation
+            if hasattr(field, 'geo_type'):  # It's a geospatial field
+                # Create optimized version with FULL level
+                optimized = DomainCondition(self.field_expr, self.operator, self.value)
+                object.__setattr__(optimized, '_opt_level', OptimizationLevel.FULL)
+                return optimized
+    
+    # Fall back to original optimization for non-geo operators
+    return original__optimize_step(self, model, level)
+
+# Store original methods before monkey patching
+original__optimize_step = DomainCondition._optimize_step
+original__to_sql = DomainCondition._to_sql
+
+DomainCondition.checked = checked
+DomainCondition._to_sql = _to_sql
+DomainCondition._optimize_step = _optimize_step
+
+# Add geospatial operators to the global CONDITION_OPERATORS set
+domains.CONDITION_OPERATORS = domains.CONDITION_OPERATORS.union(GEO_OPERATORS)
+print("Geospatial domain optimization enabled")

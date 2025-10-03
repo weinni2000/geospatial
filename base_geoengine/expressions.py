@@ -12,8 +12,9 @@ from odoo.tools import SQL, Query
 from .fields import GeoField
 from .geo_operators import GeoOperator
 
-original___condition_to_sql = BaseModel._condition_to_sql
+#original___condition_to_sql = BaseModel._condition_to_sql
 
+"""
 GEO_OPERATORS = {
     "geo_greater": ">",
     "geo_lesser": "<",
@@ -41,13 +42,10 @@ for op in GEO_OPERATORS:
 #Domain.SQL_OPERATORS.update(GEO_SQL_OPERATORS)
 
 
+#depricated
 def _condition_to_sql(
     self, alias: str, fname: str, operator: str, value, query: Query
 ) -> SQL:
-    """
-    This method has been monkey patched in order to be able to include
-    geo_operators into the Odoo search method.
-    """
     if operator in GEO_OPERATORS.keys():
         current_field = self._fields.get(fname)
         current_operator = GeoOperator(current_field)
@@ -110,48 +108,4 @@ def _condition_to_sql(
     return original___condition_to_sql(
         self, alias=alias, fname=fname, operator=operator, value=value, query=query
     )
-
-
-def get_geo_func(current_operator, operator, left, value, params, table):
-    """
-    This method will call the SQL query corresponding to the requested geo operator
-    """
-    match operator:
-        case "geo_greater":
-            query = current_operator.get_geo_greater_sql(table, left, value, params)
-        case "geo_lesser":
-            query = current_operator.get_geo_lesser_sql(table, left, value, params)
-        case "geo_equal":
-            query = current_operator.get_geo_equal_sql(table, left, value, params)
-        case "geo_touch":
-            query = current_operator.get_geo_touch_sql(table, left, value, params)
-        case "geo_within":
-            query = current_operator.get_geo_within_sql(table, left, value, params)
-        case "geo_contains":
-            query = current_operator.get_geo_contains_sql(table, left, value, params)
-        case "geo_intersect":
-            query = current_operator.get_geo_intersect_sql(table, left, value, params)
-        case _:
-            raise NotImplementedError(f"The operator {operator} is not supported")
-    return query
-
-
-def where_calc(model, domain, active_test=True, alias=None):
-    """
-    This method is copied from base, we need to create our own query.
-    """
-    # if the object has an active field ('active', 'x_active'), filter out all
-    # inactive records unless they were explicitly asked for
-    if model._active_name and active_test and model._context.get("active_test", True):
-        # the item[0] trick below works for domain items and '&'/'|'/'!'
-        # operators too
-        if not any(item[0] == model._active_name for item in domain):
-            domain = [(model._active_name, "=", 1)] + domain
-
-    query = Query(model.env, alias, model._table)
-    if domain:
-        return Domain.Domain(domain, model, alias=alias, query=query).query
-    return query
-
-
-BaseModel._condition_to_sql = _condition_to_sql
+"""

@@ -447,7 +447,7 @@ class TestModel(TransactionCase):
 
     def test_search_intersect_for_zip_1149(self):
         retails = self.env["retail.machine"]
-        zip_item = self.env["dummy.zip"].search([("name", "ilike", "1146")])
+        zip_item = self.env["dummy.zip"].search([("name", "ilike", "1146")], limit=1)
         result = retails.search([("the_point", "geo_intersect", zip_item.the_geom)])
         self.assertEqual(len(result.ids), 3)
 
