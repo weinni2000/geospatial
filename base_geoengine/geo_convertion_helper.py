@@ -31,7 +31,9 @@ def value_to_shape(value, use_wkb=False):
         else:
             # <NIKMOD>
             # 'POINT(0.0 0.0)'
+            
             try:
+                y=1
                 return wkt.loads(value)
             except Exception as e:
                 logger.warning(_("Failed to parse WKT: %s", e))

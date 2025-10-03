@@ -276,7 +276,7 @@ class TestModel(TransactionCase):
             self.geo_model.geo_polygon.equals_exact(polygon_loaded, tolerance=0.2)
         )
 
-    def test_create_polygon_geojson_format(self):
+    def test_create_creation_of_entity(self):
         polygon_geojson = """{"type":"Polygon","coordinates":[[
         [-95.80078125000001,40.09488212232117],
         [-95.07568359375001,36.68604127658193],[-90.439453125,37.80544394934273],

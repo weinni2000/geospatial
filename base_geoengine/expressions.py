@@ -5,8 +5,8 @@ import random
 import string
 
 from odoo.models import BaseModel
-from odoo.osv import expression
-from odoo.osv.expression import TERM_OPERATORS
+from odoo.fields import Command, Domain
+#from odoo.osv.Domain import TERM_OPERATORS
 from odoo.tools import SQL, Query
 
 from .fields import GeoField
@@ -32,12 +32,13 @@ GEO_SQL_OPERATORS = {
     "geo_contains": SQL("ST_Contains"),
     "geo_intersect": SQL("ST_Intersects"),
 }
+TERM_OPERATORS = [] # TERM_OPERATORS in expressions don't exits anymore
 term_operators_list = list(TERM_OPERATORS)
 for op in GEO_OPERATORS:
     term_operators_list.append(op)
 
-expression.TERM_OPERATORS = tuple(term_operators_list)
-expression.SQL_OPERATORS.update(GEO_SQL_OPERATORS)
+#Domain.TERM_OPERATORS = tuple(term_operators_list)
+#Domain.SQL_OPERATORS.update(GEO_SQL_OPERATORS)
 
 
 def _condition_to_sql(
@@ -149,7 +150,7 @@ def where_calc(model, domain, active_test=True, alias=None):
 
     query = Query(model.env, alias, model._table)
     if domain:
-        return expression.expression(domain, model, alias=alias, query=query).query
+        return Domain.Domain(domain, model, alias=alias, query=query).query
     return query
 
 

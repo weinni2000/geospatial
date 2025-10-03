@@ -3,7 +3,7 @@ import string
 
 from odoo.models import BaseModel
 from odoo.orm.fields import Field
-from odoo.osv import expression
+from odoo.fields import Command, Domain
 from odoo.tools import SQL, Query
 
 from .fields import GeoField
