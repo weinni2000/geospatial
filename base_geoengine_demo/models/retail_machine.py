@@ -2,7 +2,7 @@
 # Copyright 2023 ACSONE SA/NV
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-from odoo import _, api, fields, models
+from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -40,7 +40,7 @@ class RetailMachine(models.Model):
                 )
                 if not zip_match:
                     raise ValidationError(
-                        _(
+                        self.env._(
                             "The point must be placed in the corresponding "
                             + "area. (serial number: %s).",
                             rec.name,

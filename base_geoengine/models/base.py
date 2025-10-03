@@ -4,15 +4,13 @@
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 import logging
 
-from odoo import _, api, models
+from odoo import api, models
 from odoo.exceptions import MissingError, UserError
-from odoo.fields import Command, Domain
+from odoo.fields import Domain
 
 from .. import fields as geo_fields
 
-DEFAULT_EXTENT = (
-    "-123164.85222423, 5574694.9538936, " "1578017.6490538, 6186191.1800898"
-)
+DEFAULT_EXTENT = "-123164.85222423, 5574694.9538936, 1578017.6490538, 6186191.1800898"
 
 _logger = logging.getLogger(__name__)
 
@@ -55,12 +53,12 @@ class Base(models.AbstractModel):
             limit=1,
         )
         if not geo_view:
-            raise UserError(
-                _(
-                    "No GeoEngine view defined for the model %s. \
+            message = self.env._(
+                "No GeoEngine view defined for the model %s. \
                         Please create a view or modify view mode"
-                )
-                % self._name,
+            )
+            raise UserError(
+                message % self._name,
             )
         return geo_view
 
@@ -113,9 +111,8 @@ class Base(models.AbstractModel):
 
         field = self._fields.get(column)
         if not field or not isinstance(field, geo_fields.GeoField):
-            raise ValueError(
-                _("%s column does not exists or is not a geo field") % column
-            )
+            message = self.env._("%s column does not exists or is not a geo field")
+            raise ValueError(message % column)
         view = self._get_geo_view()
         raster = raster_obj.search(
             [("view_id", "=", view.id), ("use_to_edit", "=", True)], limit=1
@@ -123,7 +120,8 @@ class Base(models.AbstractModel):
         if not raster:
             raster = raster_obj.search([("view_id", "=", view.id)], limit=1)
         if not raster:
-            raise MissingError(_("No raster layer for view %s") % (view.name,))
+            message = self.env._("No raster layer for view %s")
+            raise MissingError(message % (view.name,))
         return {
             "edit_raster": raster.read()[0],
             "srid": field.srid,
@@ -159,7 +157,9 @@ class Base(models.AbstractModel):
         # Limit and offset are managed after, we may loose a lot of performance
         # here
         _logger.debug(
-            _("geo_search is deprecated: uses search method defined on base model")
+            self.env._(
+                "geo_search is deprecated: uses search method defined on base model"
+            )
         )
         domain = domain or []
         geo_domain = geo_domain or []
@@ -170,6 +170,8 @@ class Base(models.AbstractModel):
             search_domain = geo_domain
 
         if not search_domain:
-            raise ValueError(_("You must at least provide one of domain or geo_domain"))
+            raise ValueError(
+                self.env._("You must at least provide one of domain or geo_domain")
+            )
 
         return self.search(search_domain, limit=limit, offset=offset, order=order)

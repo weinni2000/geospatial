@@ -13,7 +13,7 @@ try:
     from shapely.geometry.base import BaseGeometry
 except ImportError:
     logger = logging.getLogger(__name__)
-    logger.warning(_("Shapely or geojson are not available in the sys path"))
+    logger.warning(_("Shapely or geojson are not available in the sys path"))  # pylint: disable=prefer-env-translation
 
 
 def value_to_shape(value, use_wkb=False):
@@ -31,12 +31,11 @@ def value_to_shape(value, use_wkb=False):
         else:
             # <NIKMOD>
             # 'POINT(0.0 0.0)'
-            
+
             try:
-                y=1
                 return wkt.loads(value)
             except Exception as e:
-                logger.warning(_("Failed to parse WKT: %s", e))
+                logger.warning(_("Failed to parse WKT: %s", e))  # pylint: disable=prefer-env-translation
                 empty = "POINT(0.0 0.0)"
                 return wkt.loads(empty)
                 # </NIKMOD>
@@ -47,7 +46,7 @@ def value_to_shape(value, use_wkb=False):
             return wkt.loads(value.wkt)
     else:
         raise TypeError(
-            _(
+            _(  # pylint: disable=prefer-env-translation
                 "Write/create/search geo type must be wkt/geojson "
                 "string or must respond to wkt"
             )

@@ -14,7 +14,7 @@
         <field name='the_point'>POINT(731452.399608894 5875278.22228421)</field>
         <field name='state'>ok</field>
     </record>
-<!--
+    <!--
     <record model='geoengine.demo.automatic.retailing.machine' id='machine_3'>
         <field name='name'>3</field>
         <field name='total_sales'>602</field>

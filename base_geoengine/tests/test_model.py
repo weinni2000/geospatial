@@ -505,7 +505,9 @@ class TestModel(TransactionCase):
 
     def test_search_within_for_retails_21(self):
         retails = self.env["retail.machine"]
-        zip_item = self.env["dummy.zip"].search([("city", "ilike", "Mollens (VD))")], limit=1)
+        zip_item = self.env["dummy.zip"].search(
+            [("city", "ilike", "Mollens (VD))")], limit=1
+        )
         result = retails.search(
             [("name", "ilike", "21"), ("the_point", "geo_within", zip_item.the_geom)]
         )

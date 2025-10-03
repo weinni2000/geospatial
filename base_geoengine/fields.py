@@ -1,48 +1,27 @@
-""" High-level objects for fields. """
+"""High-level objects for fields."""
+
 from __future__ import annotations
 
+# Part of Odoo. See LICENSE file for full copyright and licensing details.
 # Copyright 2011-2012 Nicolas Bessi (Camptocamp SA)
 # Copyright 2016 Yannick Payot (Camptocamp SA)
 # Copyright 2023 ACSONE SA/NV
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 import json
 import logging
+import random
+import string
 from operator import attrgetter
 
-from odoo import _, fields
-from odoo.tools import sql
-from odoo.orm.fields import Field
+from odoo import fields
+from odoo.models import BaseModel
 from odoo.orm.domains import DomainCondition
+from odoo.orm.fields import Field
+from odoo.tools import SQL, Query, sql
 
 from . import geo_convertion_helper as convert
 from .geo_db import create_geo_column, create_geo_index
-
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
-
-
-import functools
-import collections
-import itertools
-import logging
-import operator as pyoperator
-import re
-import typing
-import warnings
-from collections.abc import Set as AbstractSet
-from operator import attrgetter
-from odoo.models import BaseModel
-from psycopg2.extras import Json as PsycopgJson
-
-from odoo.exceptions import AccessError, MissingError
-from odoo.tools import Query, SQL, sql
-from odoo.tools.constants import PREFETCH_MAX
-from odoo.tools.misc import SENTINEL, ReadonlyDict, Sentinel, unique
-from odoo.orm.utils import COLLECTION_TYPES, SQL_OPERATORS, SUPERUSER_ID, expand_ids
-
-from odoo.fields import Domain
-import random
-import string
-
+from .geo_operators import GeoOperator
 
 logger = logging.getLogger(__name__)
 try:
@@ -52,7 +31,6 @@ try:
     from shapely.wkb import loads as wkbloads
 except ImportError:
     logger.warning("Shapely or geojson are not available in the sys path")
-from .geo_operators import GeoOperator
 
 
 def get_geo_func(current_operator, operator, left, value, params, table):
@@ -94,17 +72,16 @@ def where_calc(self, model, domain, active_test=True, alias=None):
     query = Query(model.env, alias, model._table)
     if domain:
         # MOD # old expression.expression
-        #_to_sql(self, model: BaseModel, alias: str, query: Query)
+        # _to_sql(self, model: BaseModel, alias: str, query: Query)
 
-        #DomainCondition(self.field_expr, operator, value)
+        # DomainCondition(self.field_expr, operator, value)
         domain_condition = DomainCondition(domain[0][0], domain[0][1], domain[0][2])
         # optimize the domain condition
         domain_condition = domain_condition.optimize_full(model)
         domain_condition._to_sql(model=model, alias=alias, query=query)
         return query
-        #return expression.expression(domain, model, alias=alias, query=query).query
+        # return expression.expression(domain, model, alias=alias, query=query).query
     return query
-
 
 
 GEO_SQL_OPERATORS = {
@@ -129,6 +106,7 @@ GEO_OPERATORS = {
 
 original___condition_to_sql = Field._condition_to_sql
 
+
 def _condition_to_sql(
     self,
     field_expr: str,
@@ -143,7 +121,7 @@ def _condition_to_sql(
     geo_operators into the Odoo search method.
     In Odoo 19, _condition_to_sql moved from BaseModel to Field.
     """
-    
+
     # print(field_expr)
     # field_expr = self.name  # In Field context, self.name is the field name
     if operator in GEO_OPERATORS.keys():
@@ -216,8 +194,10 @@ def _condition_to_sql(
         alias=alias,
         query=query,
     )
-    
+
+
 Field._condition_to_sql = _condition_to_sql
+
 
 class GeoField(fields.Field):
     """The field descriptor contains the field definition common to all
@@ -307,7 +287,7 @@ class GeoField(fields.Field):
         shape = convert.value_to_shape(value)
         if same_type and not shape.is_empty:
             if shape.geom_type.lower() != self.geo_type.lower():
-                msg = _(
+                msg = self.env._(
                     "Geo Value %(geom_type)s must be of the same type %(geo_type)s \
                         as fields",
                     geom_type=shape.geom_type.lower(),
@@ -327,14 +307,14 @@ class GeoField(fields.Field):
         check_data = cr.fetchone()
         if not check_data:
             raise TypeError(
-                _(
+                self.env._(
                     "geometry_columns table seems to be corrupted."
                     " SRID check is not possible"
                 )
             )
         if check_data[0] != self.srid:
             raise TypeError(
-                _(
+                self.env._(
                     "Reprojection of column is not implemented."
                     " We can not change srid %(srid)s to %(data)s",
                     srid=self.srid,
@@ -343,7 +323,7 @@ class GeoField(fields.Field):
             )
         elif check_data[1] != self.geo_type.upper():
             raise TypeError(
-                _(
+                self.env._(
                     "Geo type modification is not implemented."
                     " We can not change type %(data)s to %(geo_type)s",
                     data=check_data[1],
@@ -352,7 +332,7 @@ class GeoField(fields.Field):
             )
         elif check_data[2] != self.dim:
             raise TypeError(
-                _(
+                self.env._(
                     "Geo dimention modification is not implemented."
                     " We can not change dimention %(data)s to %(dim)s",
                     data=check_data[2],
@@ -396,7 +376,9 @@ class GeoField(fields.Field):
         self.update_geo_db_column(model)
 
         if column["udt_name"] in self.column_cast_from:
-            sql.convert_column(model.env.cr, model._table, self.name, self.column_type[1])
+            sql.convert_column(
+                model.env.cr, model._table, self.name, self.column_type[1]
+            )
         else:
             newname = (self.name + "_moved{}").format
             i = 0
@@ -536,4 +518,3 @@ fields.GeoPolygon = GeoPolygon
 fields.GeoMultiLine = GeoMultiLine
 fields.GeoMultiPoint = GeoMultiPoint
 fields.GeoMultiPolygon = GeoMultiPolygon
-

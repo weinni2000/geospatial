@@ -1,18 +1,11 @@
 # Copyright 2023 ACSONE SA/NV
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
-import random
-import string
 
-from odoo.models import BaseModel
-from odoo.fields import Command, Domain
-#from odoo.osv.Domain import TERM_OPERATORS
-from odoo.tools import SQL, Query
+# from odoo.osv.Domain import TERM_OPERATORS
 
-from .fields import GeoField
-from .geo_operators import GeoOperator
 
-#original___condition_to_sql = BaseModel._condition_to_sql
+# original___condition_to_sql = BaseModel._condition_to_sql
 
 """
 GEO_OPERATORS = {
