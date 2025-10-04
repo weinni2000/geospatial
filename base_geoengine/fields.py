@@ -14,8 +14,8 @@ import string
 from operator import attrgetter
 
 from odoo import fields
+from odoo.fields import Domain
 from odoo.models import BaseModel
-from odoo.orm.domains import DomainCondition
 from odoo.orm.fields import Field
 from odoo.tools import SQL, Query, sql
 
@@ -75,12 +75,23 @@ def where_calc(self, model, domain, active_test=True, alias=None):
         # _to_sql(self, model: BaseModel, alias: str, query: Query)
 
         # DomainCondition(self.field_expr, operator, value)
-        domain_condition = DomainCondition(domain[0][0], domain[0][1], domain[0][2])
+        # domain_condition = DomainCondition(domain[0][0], domain[0][1], domain[0][2])
         # optimize the domain condition
-        domain_condition = domain_condition.optimize_full(model)
-        domain_condition._to_sql(model=model, alias=alias, query=query)
-        return query
+        # domain_condition = domain_condition.optimize_full(model)
+        # res = domain_condition._to_sql(model=model, alias=alias, query=query)
+        # return query
         # return expression.expression(domain, model, alias=alias, query=query).query
+
+        # In Odoo 19, create Domain object and use its _to_sql method
+        domain_obj = Domain(domain)
+        optimized_domain = domain_obj.optimize_full(model)
+
+        # Apply domain to query using _to_sql
+        sql_condition = optimized_domain._to_sql(model, alias, query)
+        query.add_where(sql_condition)
+
+        return query
+
     return query
 
 
