@@ -36,6 +36,15 @@ POSTGIS_GEO_TYPES = [
 ]
 
 
+class IrModuleModule(models.Model):
+    _inherit = "ir.module.module"
+
+    imported = fields.Boolean(default=False)  # otherwise there is an error
+    # Odoo removed the field 'imported' check on ir.module.module
+    # ValueError: Invalid field ir.module.module.imported
+    # in condition ('imported', '=', False)
+
+
 class IrModelField(models.Model):
     _inherit = "ir.model.fields"
 
