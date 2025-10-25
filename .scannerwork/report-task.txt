@@ -1,0 +1,6 @@
+projectKey=mytimeclick_geospatial_7ca627e5-825a-49bc-a9cb-101db3236c7c
+serverUrl=http://sonarcube.unternhub.at
+serverVersion=25.10.0.114319
+dashboardUrl=http://sonarcube.unternhub.at/dashboard?id=mytimeclick_geospatial_7ca627e5-825a-49bc-a9cb-101db3236c7c
+ceTaskId=61e1b081-0847-4430-a4d3-f729d4541f02
+ceTaskUrl=http://sonarcube.unternhub.at/api/ce/task?id=61e1b081-0847-4430-a4d3-f729d4541f02
