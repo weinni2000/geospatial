@@ -36,7 +36,6 @@ class Base(models.AbstractModel):
                     "srid": field.srid,
                     "geo_type": field.geo_type,
                 }
-                # TODO
                 if field.compute or field.related:
                     if not field.dim:
                         geo_type["dim"] = 2
@@ -47,8 +46,8 @@ class Base(models.AbstractModel):
 
     @api.model
     def _get_geo_view(self):
-        IrView = self.env["ir.ui.view"]
-        geo_view = IrView.sudo().search(
+        ir_view = self.env["ir.ui.view"]
+        geo_view = ir_view.sudo().search(
             [("model", "=", self._name), ("type", "=", "geoengine")],
             limit=1,
         )
