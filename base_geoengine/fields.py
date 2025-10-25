@@ -71,17 +71,6 @@ def where_calc(self, model, domain, active_test=True, alias=None):
 
     query = Query(model.env, alias, model._table)
     if domain:
-        # MOD # old expression.expression
-        # _to_sql(self, model: BaseModel, alias: str, query: Query)
-
-        # DomainCondition(self.field_expr, operator, value)
-        # domain_condition = DomainCondition(domain[0][0], domain[0][1], domain[0][2])
-        # optimize the domain condition
-        # domain_condition = domain_condition.optimize_full(model)
-        # res = domain_condition._to_sql(model=model, alias=alias, query=query)
-        # return query
-        # return expression.expression(domain, model, alias=alias, query=query).query
-
         # In Odoo 19, create Domain object and use its _to_sql method
         domain_obj = Domain(domain)
         optimized_domain = domain_obj.optimize_full(model)
@@ -133,29 +122,23 @@ def _condition_to_sql(
     In Odoo 19, _condition_to_sql moved from BaseModel to Field.
     """
 
-    # print(field_expr)
-    # field_expr = self.name  # In Field context, self.name is the field name
     if operator in GEO_OPERATORS.keys():
         current_field = model._fields.get(field_expr)
         current_operator = GeoOperator(current_field)
         if current_field and isinstance(current_field, GeoField):
             params = []
             if isinstance(value, dict):
-                # We are having indirect geo_operator like (‘geom’, ‘geo_...’,
-                # {‘res.zip.poly’: [‘id’, ‘in’, [1,2,3]] })
-                ref_search = value
                 sub_queries = []
+                ref_search = value
                 for key in ref_search:
                     i = key.rfind(".")
-                    rel_model_name = key[0:i]
+                    rel_model_name = key[:i]
                     rel_col = key[i + 1 :]
                     rel_model = model.env[rel_model_name]
                     # we compute the attributes search on spatial rel
                     if ref_search[key]:
-                        rel_alias = (
-                            rel_model._table
-                            + "_"
-                            + "".join(random.choices(string.ascii_lowercase, k=5))
+                        rel_alias = f"{rel_model._table}_" + "".join(
+                            random.choices(string.ascii_lowercase, k=5)
                         )
                         rel_query = where_calc(
                             self,
@@ -170,7 +153,7 @@ def _condition_to_sql(
                                 f'"{alias}"."{field_expr}" {GEO_OPERATORS[operator]} '
                                 f"{rel_alias}.{rel_col}"
                             )
-                        elif operator in ("geo_greater", "geo_lesser"):
+                        elif operator in {"geo_greater", "geo_lesser"}:
                             rel_query.add_where(
                                 f"ST_Area({alias}.{field_expr}) "
                                 f"{GEO_OPERATORS[operator]} "

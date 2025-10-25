@@ -121,11 +121,9 @@ def _to_sql(self, model: BaseModel, alias: str, query: Query) -> SQL:
 
 def _optimize_step(self, model: BaseModel, level: OptimizationLevel) -> Domain:
     """Optimization step for geospatial operators."""
-    # For geospatial operators, we need to handle them specially during optimization
-    field_expr, operator, value = self.field_expr, self.operator, self.value  # noqa: F841
 
     # If this is a geospatial operator, mark it as optimized at FULL level
-    if operator in GEO_OPERATORS:
+    if self.operator in GEO_OPERATORS:
         # Perform basic validation and normalization
         with contextlib.suppress(Exception):
             field = self._field(model)

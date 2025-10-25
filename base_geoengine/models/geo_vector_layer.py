@@ -96,14 +96,13 @@ class GeoVectorLayer(models.Model):
     @api.constrains("geo_field_id", "model_id")
     def _check_geo_field_id(self):
         for rec in self:
-            if rec.model_id:
-                if not rec.geo_field_id.model_id == rec.model_id:
-                    raise ValidationError(
-                        self.env._(
-                            "The geo_field_id must be a field in %s model",
-                            rec.model_id.display_name,
-                        )
+            if rec.model_id and rec.geo_field_id.model_id != rec.model_id:
+                raise ValidationError(
+                    self.env._(
+                        "The geo_field_id must be a field in %s model",
+                        rec.model_id.display_name,
                     )
+                )
 
     @api.constrains("geo_repr", "attribute_field_id")
     def _check_geo_repr(self):

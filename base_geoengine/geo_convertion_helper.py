@@ -40,10 +40,7 @@ def value_to_shape(value, use_wkb=False):
                 return wkt.loads(empty)
                 # </NIKMOD>
     elif hasattr(value, "wkt"):
-        if isinstance(value, BaseGeometry):
-            return value
-        else:
-            return wkt.loads(value.wkt)
+        return value if isinstance(value, BaseGeometry) else wkt.loads(value.wkt)
     else:
         raise TypeError(
             _(  # pylint: disable=prefer-env-translation
