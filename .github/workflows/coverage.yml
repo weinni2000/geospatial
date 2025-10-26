@@ -1,0 +1,75 @@
+name: coverage
+
+permissions:
+  contents: read
+  checks: write
+  id-token: write
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["*"]
+  pull_request:
+
+jobs:
+  coverage:
+    runs-on: ubuntu-22.04
+    container: ${{ matrix.container }}
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - container: ghcr.io/oca/oca-ci/py3.10-odoo19.0:latest
+            name: test with Odoo
+    services:
+      postgres:
+        image: postgis/postgis:13-3.4
+        env:
+          POSTGRES_USER: odoo
+          POSTGRES_PASSWORD: odoo
+          POSTGRES_DB: odoo
+        ports:
+          - 5435:5432
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - name: Install addons and dependencies
+        run: oca_install_addons
+
+      - name: Check licenses
+        run: manifestoo -d . check-licenses
+
+      - name: Check development status
+        run: manifestoo -d . check-dev-status --default-dev-status=Beta
+
+      - name: Initialize test db
+        run: oca_init_test_database
+
+      - name: Run tests and collect coverage
+        run: |
+          mkdir -p /data/test_results
+          oca_run_tests
+          echo "=== List XML files ==="
+          find /data/test_results -name '*.xml' || true
+        env:
+          PYTEST_ADDOPTS: >
+            --junitxml=/data/test_results/odoo-tests.xml
+            --cov=addons_path
+            --cov-report=xml:/data/test_results/coverage.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: /data/test_results/coverage.xml
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v4
+        if: success() || failure()
+        with:
+          report_paths: '/data/test_results/*.xml'
+          include_passed: true
