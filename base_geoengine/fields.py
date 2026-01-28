@@ -13,7 +13,7 @@ import random
 import string
 from operator import attrgetter
 
-from odoo import fields
+from odoo import _, fields
 from odoo.fields import Domain
 from odoo.models import BaseModel
 from odoo.orm.fields import Field
@@ -281,7 +281,7 @@ class GeoField(fields.Field):
         shape = convert.value_to_shape(value)
         if same_type and not shape.is_empty:
             if shape.geom_type.lower() != self.geo_type.lower():
-                msg = self.env._(
+                msg = _(
                     "Geo Value %(geom_type)s must be of the same type %(geo_type)s \
                         as fields",
                     geom_type=shape.geom_type.lower(),
@@ -301,14 +301,14 @@ class GeoField(fields.Field):
         check_data = cr.fetchone()
         if not check_data:
             raise TypeError(
-                self.env._(
+                _(
                     "geometry_columns table seems to be corrupted."
                     " SRID check is not possible"
                 )
             )
         if check_data[0] != self.srid:
             raise TypeError(
-                self.env._(
+                _(
                     "Reprojection of column is not implemented."
                     " We can not change srid %(srid)s to %(data)s",
                     srid=self.srid,
@@ -317,7 +317,7 @@ class GeoField(fields.Field):
             )
         elif check_data[1] != self.geo_type.upper():
             raise TypeError(
-                self.env._(
+                _(
                     "Geo type modification is not implemented."
                     " We can not change type %(data)s to %(geo_type)s",
                     data=check_data[1],
@@ -326,7 +326,7 @@ class GeoField(fields.Field):
             )
         elif check_data[2] != self.dim:
             raise TypeError(
-                self.env._(
+                _(
                     "Geo dimention modification is not implemented."
                     " We can not change dimention %(data)s to %(dim)s",
                     data=check_data[2],

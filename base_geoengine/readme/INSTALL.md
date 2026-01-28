@@ -14,6 +14,5 @@ The module also requires two additional python libs:
 
 When you will install the module this two additional libs will be
 installed.
-
 For a complete documentation please refer to the [public
 documenation](http://oca.github.io/geospatial/index.html)
