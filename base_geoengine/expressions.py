@@ -102,7 +102,7 @@ def _condition_to_sql(
 
                         subquery_sql = rel_query.subselect(SQL("1"))
                         sub_query_mogrified = (
-                            model.env.cr.mogrify(subquery_sql.code, subquery_sql.params)
+                            model.env.cr.mogrify(subquery_sql)
                             .decode("utf-8")
                             .replace(f"'{rel_model._table}'", f'"{rel_model._table}"')
                             .replace("%", "%%")

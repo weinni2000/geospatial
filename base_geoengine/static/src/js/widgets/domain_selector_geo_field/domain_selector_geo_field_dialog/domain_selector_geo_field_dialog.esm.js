@@ -32,9 +32,3 @@ DomainSelectorGeoFieldDialog.props = {
     model: {type: Object, optional: true},
 };
 
-DomainSelectorGeoFieldDialog.defaultProps = {
-    initialValue: "",
-    readonly: true,
-    isDebugMode: false,
-    title: "Domain",
-};

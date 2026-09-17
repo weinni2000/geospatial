@@ -62,7 +62,7 @@ class GeoVectorLayer(models.Model):
         domain=[("ttype", "ilike", "geo_")],
     )
 
-    attribute_field_id_domain = fields.Binary(
+    attribute_field_id_domain = fields.Json(
         compute="_compute_attribute_field_id_domain", readonly=True, store=False
     )
     attribute_field_id = fields.Many2one("ir.model.fields", "Attribute field")

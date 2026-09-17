@@ -4,7 +4,7 @@
     <t t-name="base_geoengine.DomainSelectorFieldInputWithTags">
         <div class="o_ds_value_cell">
             <div class="o_domain_leaf_value_input">
-                <t t-foreach="props.value" t-as="tag" t-key="tag_index">
+                <t t-foreach="this.props.value" t-as="tag" t-key="tag_index">
                     <span class="badge rounded-pill">
                         <t t-esc="tag" />
                         <i
@@ -22,13 +22,13 @@
                     type="text"
                     class="o_input"
                     placeholder="Add new value"
-                    t-ref="input"
+                    t-ref="this.inputRef"
                 />
                 <button
                     class="btn btn-sm btn-primary fa fa-plus o_domain_leaf_value_add_tag_button"
                     aria-label="Add tag"
                     title="Add tag"
-                    t-on-click="onBtnClick"
+                    t-on-click="this.onBtnClick"
                 />
             </div>
         </div>

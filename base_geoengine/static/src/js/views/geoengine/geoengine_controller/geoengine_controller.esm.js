@@ -81,7 +81,9 @@ export class GeoengineController extends Component {
                       activeFields: activeFields,
                       openGroupsByDefault: true,
                   };
-        this.props.searchMenuTypes = this.props.searchMenuTypes || [];
+        // `this.props` is owned by the parent and must not be mutated; keep
+        // the fallback in a local variable instead of writing it back onto props.
+        const searchMenuTypes = this.props.searchMenuTypes || [];
 
         return {
             config: modelConfig,
@@ -92,7 +94,7 @@ export class GeoengineController extends Component {
             limit: archInfo.limit || limit,
             countLimit: archInfo.countLimit,
             defaultOrderBy: archInfo.defaultOrder,
-            defaultGroupBy: this.props.searchMenuTypes.includes("groupBy")
+            defaultGroupBy: searchMenuTypes.includes("groupBy")
                 ? defaultGroupBy
                 : false,
             groupsLimit: archInfo.groupsLimit,

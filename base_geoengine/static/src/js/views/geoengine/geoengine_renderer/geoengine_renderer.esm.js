@@ -14,7 +14,6 @@ let geostats = null;
  */
 
 import {
-    App,
     Component,
     onMounted,
     onPatched,
@@ -22,6 +21,7 @@ import {
     onWillUpdateProps,
     proxy,
     useEffect,
+    useScope,
 } from "@odoo/owl";
 import {GeoengineRecord} from "../geoengine_record/geoengine_record.esm";
 import {LayersPanel} from "../layers_panel/layers_panel.esm";
@@ -33,8 +33,6 @@ import {
 } from "@web/model/relational_model/utils";
 import {evaluateExpr} from "@web/core/py_js/py";
 import {loadGeoengineLibs} from "../../../geoengine_libs.esm";
-import {getTemplate} from "@web/core/templates";
-import {customDirectives} from "@web/env";
 import {parseXML} from "@web/core/utils/xml";
 import {rasterLayersStore} from "../../../raster_layers_store.esm";
 import {registry} from "@web/core/registry";
@@ -53,7 +51,17 @@ const LEGEND_MAX_ITEMS = 10;
 
 export class GeoengineRenderer extends Component {
     setup() {
-        this.state = proxy({selectedFeatures: [], isModified: false, isFit: false});
+        // Captured so `loadView()` can construct RelationalModel instances from
+        // deep inside an async callback: its constructor calls Owl hooks
+        // (usePlugin), which require an active scope, no longer implicitly
+        // available past the first `await` of an onWillStart callback.
+        this.scope = useScope();
+        this.state = proxy({
+            selectedFeatures: [],
+            isModified: false,
+            isFit: false,
+            popupRecord: null,
+        });
         this.models = [];
         this.cfg_models = [];
         this.vectorModel = {};
@@ -514,73 +522,61 @@ export class GeoengineRenderer extends Component {
     updateInfoBox(features) {
         const feature = features.item(0);
         if (feature !== undefined) {
-            const popup = this.getPopup();
-            if (feature !== undefined) {
-                var attributes = feature.get("attributes");
+            var attributes = feature.get("attributes");
 
-                if (this.cfg_models.includes(feature.get("model"))) {
-                    const model = this.models.find(
-                        (el) => el.model.resModel === feature.get("model")
-                    );
-                    this.mountGeoengineRecord({
-                        popup,
-                        archInfo: model.archInfo,
-                        templateDocs: model.archInfo.templateDocs,
-                        model: model.model,
-                        attributes,
-                    });
-                } else {
-                    this.mountGeoengineRecord({
-                        popup,
-                        archInfo: this.props.archInfo,
-                        templateDocs: this.props.archInfo.templateDocs,
-                        model: this.props.data,
-                        attributes,
-                    });
-                }
-
-                var coord = ol.extent.getCenter(feature.getGeometry().getExtent());
-                this.overlay.setPosition(coord);
+            if (this.cfg_models.includes(feature.get("model"))) {
+                const model = this.models.find(
+                    (el) => el.model.resModel === feature.get("model")
+                );
+                this.mountGeoengineRecord({
+                    archInfo: model.archInfo,
+                    templateDocs: model.archInfo.templateDocs,
+                    model: model.model,
+                    attributes,
+                });
+            } else {
+                this.mountGeoengineRecord({
+                    archInfo: this.props.archInfo,
+                    templateDocs: this.props.archInfo.templateDocs,
+                    model: this.props.data,
+                    attributes,
+                });
             }
+
+            var coord = ol.extent.getCenter(feature.getGeometry().getExtent());
+            this.overlay.setPosition(coord);
         } else {
             this.hidePopup();
         }
     }
 
-    getPopup() {
-        const popup = document.getElementById("popup-content");
-        if (popup.firstChild !== null) {
-            popup.removeChild(popup.firstChild);
-        }
-        return popup;
-    }
-
     /**
-     * Allow you to mount geoengine record. This displays the record in the info box template.
-     * @param {*} popup
+     * Allow you to display the record in the info box template.
+     *
+     * The info box's content is a normal child component (GeoengineRecord),
+     * portaled into the `#popup-content` DOM node with `t-custom-portal`
+     * rather than mounted as a separate Owl App: a separate App would need
+     * its own full plugin set (core widgets like <field/> use several
+     * plugins internally) and starting a second one alongside the
+     * already-running app causes duplicate service/plugin registration
+     * errors. Being part of the same component tree means it shares the
+     * existing env/services/plugins for free.
      * @param {*} archInfo
      * @param {*} templateDocs
      * @param {*} model
      * @param {*} attributes
      * @param {*} record
      */
-    mountGeoengineRecord({popup, archInfo, templateDocs, model, attributes, record}) {
+    mountGeoengineRecord({archInfo, templateDocs, model, attributes, record}) {
         this.record =
             record === undefined
                 ? model.records.find((element) => element._values.id === attributes.id)
                 : record;
-        const config = {
-            env: this.env,
-            props: {
-                archInfo,
-                record: this.record,
-                templates: templateDocs,
-            },
-            getTemplate,
-            customDirectives,
+        this.state.popupRecord = {
+            archInfo,
+            record: this.record,
+            templates: templateDocs,
         };
-        const app = new App(config);
-        app.createRoot(GeoengineRecord, config).mount(popup);
     }
 
     /**
@@ -588,11 +584,9 @@ export class GeoengineRenderer extends Component {
      * @param {*} record
      */
     onDisplayPopupRecord(record) {
-        const popup = this.getPopup();
         const feature = this.vectorSource.getFeatureById(record.resId);
         if (feature) {
             this.mountGeoengineRecord({
-                popup,
                 archInfo: this.props.archInfo,
                 templateDocs: this.props.archInfo.templateDocs,
                 record,
@@ -644,6 +638,7 @@ export class GeoengineRenderer extends Component {
 
     hidePopup() {
         this.overlay.setPosition(undefined);
+        this.state.popupRecord = null;
     }
 
     /**
@@ -665,7 +660,18 @@ export class GeoengineRenderer extends Component {
      * when the user changes raster layers.
      */
     onRasterLayerChanged(rasters) {
-        if (!this.map) {
+        // Read every raster's mutable properties unconditionally so this effect
+        // keeps depending on them even on runs that return early below (e.g. the
+        // very first run, before `this.map` exists): Owl's reactivity only
+        // re-runs an effect for properties it actually read on a previous run,
+        // so skipping this on the early runs would mean a later mutation (like
+        // toggling a raster's visibility) is never noticed again.
+        this.primedRasters = (rasters || []).map((raster) => [
+            raster.name,
+            raster.isVisible,
+            raster.opacity,
+        ]);
+        if (!this.map || !rasters) {
             return;
         }
         this.map
@@ -689,7 +695,21 @@ export class GeoengineRenderer extends Component {
      * when the user changes vector layers.
      */
     async onVectorLayerChanged(vectors) {
-        if (!this.map) {
+        // Read every vector's mutable properties unconditionally so this effect
+        // keeps depending on them even on runs that return early below (e.g. the
+        // very first run, before `this.map` exists): Owl's reactivity only
+        // re-runs an effect for properties it actually read on a previous run,
+        // so skipping this on the early runs would mean a later mutation (like
+        // toggling a layer's visibility) is never noticed again.
+        this.primedVectors = (vectors || []).map((vector) => [
+            vector.name,
+            vector.isVisible,
+            vector.onVisibleChanged,
+            vector.onDomainChanged,
+            vector.onLayerChanged,
+            vector.onSequenceChanged,
+        ]);
+        if (!this.map || !vectors) {
             return;
         }
         await this.map
@@ -1019,10 +1039,14 @@ export class GeoengineRenderer extends Component {
         };
 
         if (model === "geoengine.vector.layer") {
-            this.vectorModel = new Model(this.env, searchParams, this.services);
+            this.vectorModel = this.scope.run(
+                () => new Model(this.env, searchParams, this.services)
+            );
             await this.vectorModel.load(searchParams);
         } else if (this.models.find((e) => e.model.resModel === model) === undefined) {
-            const toLoadModel = new Model(this.env, searchParams, this.services);
+            const toLoadModel = this.scope.run(
+                () => new Model(this.env, searchParams, this.services)
+            );
             await toLoadModel.load().then(() => {
                 this.models.push({model: toLoadModel.root, archInfo});
             });
