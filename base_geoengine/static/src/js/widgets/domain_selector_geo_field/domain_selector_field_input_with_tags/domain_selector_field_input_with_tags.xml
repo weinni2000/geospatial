@@ -8,7 +8,8 @@
                     <span class="badge rounded-pill">
                         <t t-esc="tag" />
                         <i
-                            class="o_domain_leaf_value_remove_tag_button fa fa-times"
+                            class="o_domain_leaf_value_remove_tag_button oi oi-fw"
+                            data-icon="close"
                             role="img"
                             aria-label="Remove tag"
                             title="Remove tag"
@@ -25,7 +26,8 @@
                     t-ref="this.inputRef"
                 />
                 <button
-                    class="btn btn-sm btn-primary fa fa-plus o_domain_leaf_value_add_tag_button"
+                    class="btn btn-sm btn-primary oi oi-fw o_domain_leaf_value_add_tag_button"
+                    data-icon="add"
                     aria-label="Add tag"
                     title="Add tag"
                     t-on-click="this.onBtnClick"

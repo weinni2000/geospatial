@@ -14,7 +14,7 @@
                     t-attf-class="{{this.state.isFolded ? 'unfold text-900': 'fold'}}"
                     t-on-click="this.fold"
                 >
-                    <i class="fa fa-arrows-h" />
+                    <i class="oi oi-fw" data-icon="swap_horiz" />
                 </button>
             </div>
             <div t-if="!this.state.isFolded">
@@ -49,7 +49,8 @@
                                         t-on-click="() => this.props.zoomOnFeature(record)"
                                     >
                                         <i
-                                            class="fa fa-search-plus me-2 text-primary"
+                                            class="oi oi-fw me-2 text-primary"
+                                            data-icon="zoom_in"
                                         />
                                     </button>
                                     <button
@@ -57,7 +58,8 @@
                                         t-on-click="() => this.props.zoomOutOnFeature(record)"
                                     >
                                         <i
-                                            class="fa fa-search-minus me-2 text-primary"
+                                            class="oi oi-fw me-2 text-primary"
+                                            data-icon="zoom_out"
                                         />
                                     </button>
                                 </div>

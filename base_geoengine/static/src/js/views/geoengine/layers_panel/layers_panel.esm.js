@@ -54,7 +54,7 @@ export class LayersPanel extends Component {
         useSortable({
             ref: this.rootRef,
             elements: ".item",
-            handle: ".fa-sort",
+            handle: ".o_drag_handle",
             onDragStart: (params) => {
                 const {element} = params;
                 dataRowId = element.dataset.id;

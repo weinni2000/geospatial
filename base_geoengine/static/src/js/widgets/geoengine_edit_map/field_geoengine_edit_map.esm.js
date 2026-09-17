@@ -223,7 +223,7 @@ export class FieldGeoEngineEditMap extends Component {
      */
     createTrashControl() {
         const button = document.createElement("button");
-        button.innerHTML = '<i class="fa fa-trash"/>';
+        button.innerHTML = '<i class="oi oi-fw" data-icon="delete"/>';
         button.addEventListener("click", () => {
             this.source.clear();
             this.onUIChange(null);

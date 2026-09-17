@@ -16,7 +16,7 @@
                 />
             </div>
             <button class="btn btn-link col-1" t-on-click.prevent="this.display">
-                <i class="fa fa-pencil-square" />
+                <i class="oi oi-fw" data-icon="edit_square" />
             </button>
         </div>
     </t>

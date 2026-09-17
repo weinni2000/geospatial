@@ -306,7 +306,7 @@ export class GeoengineRenderer extends Component {
 
     createEditControl() {
         const {element, button} = this.createHtmlControl(
-            '<i class="fa fa-magic"></i>',
+            '<i class="oi oi-fw" data-icon="auto_fix_high"></i>',
             "edit-control ol-unselectable ol-control"
         );
 
@@ -352,7 +352,7 @@ export class GeoengineRenderer extends Component {
 
     createDrawControl() {
         const {element, button} = this.createHtmlControl(
-            '<i class="fa fa-pencil"></i>',
+            '<i class="oi oi-fw" data-icon="draw"></i>',
             "draw-control ol-unselectable ol-control"
         );
         button.addEventListener("click", () => {
@@ -394,7 +394,7 @@ export class GeoengineRenderer extends Component {
 
     createSelectControl() {
         const {element, button} = this.createHtmlControl(
-            '<i class="fa fa-mouse-pointer"></i>',
+            '<i class="oi oi-fw" data-icon="arrow_selector_tool"></i>',
             "select-control ol-unselectable ol-control"
         );
         this.addSelectedClassToButton(button);
@@ -1111,8 +1111,16 @@ export class GeoengineRenderer extends Component {
     styleVectorLayerColored(cfg, data) {
         var indicator = cfg.attribute_field_id[1];
         var values = this.extractLayerValues(cfg, data);
-        var nb_class = cfg.nb_class || DEFAULT_NUM_CLASSES;
+        // geostats requires strictly fewer classes than the number of values
+        // in the serie (`pop()`), otherwise `_classificationCheck` throws a
+        // TypeError. Clamp the requested number of classes so quantile/interval
+        // classifications never exceed what the current serie can support.
+        var nb_class = Math.max(
+            1,
+            Math.min(cfg.nb_class || DEFAULT_NUM_CLASSES, values.length - 1)
+        );
         var opacity = cfg.layer_opacity;
+
         var begin_color_hex = cfg.begin_color || DEFAULT_BEGIN_COLOR;
         var end_color_hex = cfg.end_color || DEFAULT_END_COLOR;
         var begin_color = chroma(begin_color_hex).alpha(opacity).css();
