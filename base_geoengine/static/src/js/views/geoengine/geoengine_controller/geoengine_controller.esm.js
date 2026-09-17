@@ -4,7 +4,7 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component, useState} from "@odoo/owl";
+import {Component, proxy} from "@odoo/owl";
 import {FormViewDialog} from "@web/views/view_dialogs/form_view_dialog";
 import {Layout} from "@web/search/layout";
 import {SearchBar} from "@web/search/search_bar/search_bar";
@@ -23,15 +23,13 @@ export class GeoengineController extends Component {
      * Setup the controller by using the useModel hook.
      */
     setup() {
-        this.state = useState({isSavedOrDiscarded: false});
+        this.state = proxy({isSavedOrDiscarded: false});
         this.actionService = useService("action");
         this.view = useService("view");
         this.addDialog = useOwnedDialogs();
         this.editable = this.props.archInfo.editable;
         this.archInfo = this.props.archInfo;
-        this.model = useState(
-            useModelWithSampleData(this.props.Model, this.modelParams)
-        );
+        this.model = useModelWithSampleData(this.props.Model, this.modelParams);
         this.searchBarToggler = useSearchBarToggler();
         /**
          * Allow you to display records on the map thanks to the paging located

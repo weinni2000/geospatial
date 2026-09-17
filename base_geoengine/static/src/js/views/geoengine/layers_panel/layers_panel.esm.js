@@ -5,7 +5,7 @@
  */
 
 import {CheckBox} from "@web/core/checkbox/checkbox";
-import {Component, onWillStart, useRef, useState} from "@odoo/owl";
+import {Component, onWillStart, proxy, useRef} from "@odoo/owl";
 import {DomainSelectorGeoFieldDialog} from "../../../widgets/domain_selector_geo_field/domain_selector_geo_field_dialog/domain_selector_geo_field_dialog.esm";
 import {FormViewDialog} from "@web/views/view_dialogs/form_view_dialog";
 import {_t} from "@web/core/l10n/translation";
@@ -21,7 +21,7 @@ export class LayersPanel extends Component {
         this.orm = useService("orm");
         this.actionService = useService("action");
         this.view = useService("view");
-        this.state = useState({geoengineLayers: {}, isFolded: false});
+        this.state = proxy({geoengineLayers: {}, isFolded: false});
         this.addDialog = useOwnedDialogs();
 
         /**

@@ -5,18 +5,13 @@
  */
 import {SearchBarRecords} from "./search_bar_records/search_bar_records.esm";
 import {useService} from "@web/core/utils/hooks";
+import {onWillRender} from "@web/owl2/utils";
 
-import {
-    Component,
-    onWillRender,
-    onWillStart,
-    onWillUpdateProps,
-    useState,
-} from "@odoo/owl";
+import {Component, onWillStart, onWillUpdateProps, proxy} from "@odoo/owl";
 
 export class RecordsPanel extends Component {
     setup() {
-        this.state = useState({
+        this.state = proxy({
             isFolded: false,
             isClicked: 0,
             modelDescription: "",

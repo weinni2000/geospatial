@@ -4,7 +4,7 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
+import {Component, onWillStart, onWillUpdateProps, proxy} from "@odoo/owl";
 import {Domain} from "@web/core/domain";
 import {DomainSelectorGeoFieldDialog} from "../domain_selector_geo_field_dialog/domain_selector_geo_field_dialog.esm";
 import {ModelFieldSelector} from "@web/core/model_field_selector/model_field_selector";
@@ -18,7 +18,7 @@ import {useOwnedDialogs} from "@web/core/utils/hooks";
  */
 export class DomainSelectorGeoFieldInput extends Component {
     setup() {
-        this.state = useState({
+        this.state = proxy({
             resModel: "",
             fieldName: "",
             subField: "",

@@ -20,8 +20,8 @@ import {
     onPatched,
     onWillStart,
     onWillUpdateProps,
-    reactive,
-    useState,
+    proxy,
+    useEffect,
 } from "@odoo/owl";
 import {GeoengineRecord} from "../geoengine_record/geoengine_record.esm";
 import {LayersPanel} from "../layers_panel/layers_panel.esm";
@@ -53,19 +53,22 @@ const LEGEND_MAX_ITEMS = 10;
 
 export class GeoengineRenderer extends Component {
     setup() {
-        this.state = useState({selectedFeatures: [], isModified: false, isFit: false});
+        this.state = proxy({selectedFeatures: [], isModified: false, isFit: false});
         this.models = [];
         this.cfg_models = [];
         this.vectorModel = {};
         this.legends = [];
 
-        // When a change is issued in the rasterLayersStore or the vectorLayersStore the LayerChanged method is called.
-        this.rasterLayersStore = reactive(rasterLayersStore, () =>
-            this.onRasterLayerChanged()
-        );
-        this.vectorLayersStore = reactive(vectorLayersStore, () =>
-            this.onVectorLayerChanged()
-        );
+        this.rasterLayersStore = rasterLayersStore;
+        this.vectorLayersStore = vectorLayersStore;
+        // When a change is issued in the rasterLayersStore or the vectorLayersStore the
+        // LayerChanged method is called. `useEffect` auto-tracks the reactive reads
+        // performed while it runs (here, inside `onRasterLayerChanged`/
+        // `onVectorLayerChanged`) and re-runs whenever they change; the store read is
+        // passed in explicitly so it is always tracked, even before `this.map` exists
+        // (the methods themselves no-op until the map is mounted).
+        useEffect(() => this.onRasterLayerChanged(this.rasterLayersStore.rastersLayers));
+        useEffect(() => this.onVectorLayerChanged(this.vectorLayersStore.vectorsLayers));
 
         this.orm = useService("orm");
         this.view = useService("view");
@@ -566,7 +569,7 @@ export class GeoengineRenderer extends Component {
             record === undefined
                 ? model.records.find((element) => element._values.id === attributes.id)
                 : record;
-        const app = new App(GeoengineRecord, {
+        const config = {
             env: this.env,
             props: {
                 archInfo,
@@ -575,8 +578,9 @@ export class GeoengineRenderer extends Component {
             },
             getTemplate,
             customDirectives,
-        });
-        app.mount(popup);
+        };
+        const app = new App(config);
+        app.createRoot(GeoengineRecord, config).mount(popup);
     }
 
     /**
@@ -660,7 +664,10 @@ export class GeoengineRenderer extends Component {
      * Allows you to change the visibility of layers. This method is called
      * when the user changes raster layers.
      */
-    onRasterLayerChanged() {
+    onRasterLayerChanged(rasters) {
+        if (!this.map) {
+            return;
+        }
         this.map
             .getLayers()
             .getArray()
@@ -668,7 +675,7 @@ export class GeoengineRenderer extends Component {
             .getLayers()
             .getArray()
             .forEach((layer) => {
-                this.rasterLayersStore.rastersLayers.forEach((raster) => {
+                rasters.forEach((raster) => {
                     if (raster.name === layer.get("title")) {
                         layer.setVisible(raster.isVisible);
                         layer.setOpacity(raster.opacity);
@@ -681,7 +688,10 @@ export class GeoengineRenderer extends Component {
      * Allows you to change the visibility of layers. This method is called
      * when the user changes vector layers.
      */
-    async onVectorLayerChanged() {
+    async onVectorLayerChanged(vectors) {
+        if (!this.map) {
+            return;
+        }
         await this.map
             .getLayers()
             .getArray()
@@ -689,7 +699,7 @@ export class GeoengineRenderer extends Component {
             .getLayers()
             .getArray()
             .forEach((layer) => {
-                this.vectorLayersStore.vectorsLayers.forEach(async (vector) => {
+                vectors.forEach(async (vector) => {
                     if (vector.name === layer.get("title")) {
                         if (vector.onVisibleChanged) {
                             this.onVisibleChanged(vector, layer);

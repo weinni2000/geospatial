@@ -8,7 +8,8 @@ import string
 from odoo import fields
 from odoo.fields import Domain
 from odoo.models import BaseModel
-from odoo.tools import SQL, Query
+from odoo.orm.query import Query, TableSQL
+from odoo.tools import SQL
 
 from .fields import GeoField
 from .geo_operators import GeoOperator
@@ -40,17 +41,17 @@ GEO_SQL_OPERATORS = {
 
 def _condition_to_sql(
     self,
+    table: TableSQL,
     field_expr: str,
     operator: str,
     value,
-    model: BaseModel,
-    alias: str,
-    query: Query,
 ) -> SQL:
     """
     This method has been monkey patched in order to be able to include
     geo_operators into the Odoo search method.
     """
+    model: BaseModel = table._model
+    alias = table._alias
     if operator in GEO_OPERATORS.keys():
         current_field = model._fields.get(field_expr)
         current_operator = GeoOperator(current_field)
@@ -79,8 +80,9 @@ def _condition_to_sql(
                             active_test=True,
                             alias=rel_alias,
                         )
-                        # Record rules (ir.rule) on the related model are applied
-                        # inside where_calc(), mirroring BaseModel._search().
+                        # Access rights and record rules (ir.access) on the related
+                        # model are applied inside where_calc(), mirroring
+                        # BaseModel._search().
                         if operator == "geo_equal":
                             rel_query.add_where(
                                 f'"{alias}"."{field_expr}" {GEO_OPERATORS[operator]} '
@@ -98,7 +100,7 @@ def _condition_to_sql(
                                 f"{rel_alias}.{rel_col})"
                             )
 
-                        subquery_sql = rel_query.subselect("1")
+                        subquery_sql = rel_query.subselect(SQL("1"))
                         sub_query_mogrified = (
                             model.env.cr.mogrify(subquery_sql.code, subquery_sql.params)
                             .decode("utf-8")
@@ -114,12 +116,10 @@ def _condition_to_sql(
             return SQL(query_str, *params)
     return original___condition_to_sql(
         self,
+        table=table,
         field_expr=field_expr,
         operator=operator,
         value=value,
-        model=model,
-        alias=alias,
-        query=query,
     )
 
 
@@ -155,10 +155,10 @@ def where_calc(model, domain, active_test=True, alias=None):
     This method is copied from base, we need to create our own query.
 
     It mirrors ``BaseModel._search``: besides ``active_test`` filtering, it also
-    applies record rules (``ir.rule``) to the resulting query. This matters for
-    the indirect geo-operators, whose spatial sub-query is built here: without
-    it, the sub-query would match related records the user is not allowed to
-    read (row-level security bypass).
+    applies access rights and record rules (``ir.access``) to the resulting
+    query. This matters for the indirect geo-operators, whose spatial
+    sub-query is built here: without it, the sub-query would match related
+    records the user is not allowed to read (row-level security bypass).
     """
     # if the object has an active field ('active', 'x_active'), filter out all
     # inactive records unless they were explicitly asked for
@@ -168,24 +168,27 @@ def where_calc(model, domain, active_test=True, alias=None):
         if not any(item[0] == model._active_name for item in domain):
             domain = [(model._active_name, "=", 1)] + domain
 
-    query = Query(model.env, alias, model._table)
-    if domain:
-        # In Odoo 19, create Domain object and use its _to_sql method
-        domain_obj = Domain(domain)
-        optimized_domain = domain_obj.optimize_full(model)
-        sql_condition = optimized_domain._to_sql(model, alias, query)
-        query.add_where(sql_condition)
+    # Apply access rights and record rules, like BaseModel._search does.
+    # Skipped for the superuser (env.su), exactly as in core.
+    if model.env.su:
+        sec_domain = Domain.TRUE
+    else:
+        sec_domain = model._access_domain("read")
+        if sec_domain.is_false():
+            model.browse().check_access("read")
 
-    # Apply record rules, like BaseModel._search does. Skipped for the
-    # superuser (env.su), exactly as in core.
-    if not model.env.su:
-        model.browse().check_access("read")
+    domain_obj = Domain(domain).optimize_full(model)
+
+    query = Query(model, alias)
+    if not domain_obj.is_true():
+        query.add_where(domain_obj._to_sql(query.table))
+
+    if not sec_domain.is_true():
         model_sudo = model.sudo().with_context(active_test=False)
-        sec_domain = model.env["ir.rule"]._compute_domain(model._name, "read")
-        sec_domain = sec_domain.optimize_full(model_sudo)
+        sec_domain = sec_domain.optimize_full(model_sudo, search_domain=domain_obj)
         if sec_domain.is_false():
             query.add_where(SQL("FALSE"))
         elif not sec_domain.is_true():
-            query.add_where(sec_domain._to_sql(model_sudo, alias, query))
+            query.add_where(sec_domain._to_sql(query.table._with_model(model_sudo)))
 
     return query
