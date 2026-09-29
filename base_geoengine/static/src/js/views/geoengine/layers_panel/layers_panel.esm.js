@@ -5,7 +5,7 @@
  */
 
 import {CheckBox} from "@web/core/checkbox/checkbox";
-import {Component, onWillStart, useRef, useState} from "@odoo/owl";
+import {Component, onWillStart, proxy, signal} from "@odoo/owl";
 import {DomainSelectorGeoFieldDialog} from "../../../widgets/domain_selector_geo_field/domain_selector_geo_field_dialog/domain_selector_geo_field_dialog.esm";
 import {FormViewDialog} from "@web/views/view_dialogs/form_view_dialog";
 import {_t} from "@web/core/l10n/translation";
@@ -17,11 +17,13 @@ import {useSortable} from "@web/core/utils/sortable_owl";
 import {vectorLayersStore} from "../../../vector_layers_store.esm";
 
 export class LayersPanel extends Component {
+    rootRef = signal.ref();
+
     setup() {
         this.orm = useService("orm");
         this.actionService = useService("action");
         this.view = useService("view");
-        this.state = useState({geoengineLayers: {}, isFolded: false});
+        this.state = proxy({geoengineLayers: {}, isFolded: false});
         this.addDialog = useOwnedDialogs();
 
         /**
@@ -50,9 +52,9 @@ export class LayersPanel extends Component {
          */
         let dataRowId = "";
         useSortable({
-            ref: useRef("root"),
+            ref: this.rootRef,
             elements: ".item",
-            handle: ".fa-sort",
+            handle: ".o_drag_handle",
             onDragStart: (params) => {
                 const {element} = params;
                 dataRowId = element.dataset.id;

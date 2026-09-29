@@ -12,6 +12,7 @@ from odoo.orm.domains import (
     DomainCondition,
     OptimizationLevel,
     Query,
+    TableSQL,
 )
 from odoo.orm.identifiers import NewId
 
@@ -48,11 +49,10 @@ def checked(self) -> DomainCondition:
             # </MOD>
         )
         return DomainCondition(self.field_expr, operator, self.value).checked()
-    if operator not in CONDITION_OPERATORS:
-        # <MOD>
-        if operator not in GEO_OPERATORS:
-            # </MOD>
-            self._raise("Invalid operator")
+    # <MOD>
+    if operator not in CONDITION_OPERATORS and operator not in GEO_OPERATORS:
+        # </MOD>
+        self._raise("Invalid operator")
 
     # check already the consistency for domain manipulation
     # these are common mistakes and optimizations,
@@ -99,7 +99,7 @@ def checked(self) -> DomainCondition:
     return self
 
 
-def _to_sql(self, model: BaseModel, alias: str, query: Query) -> SQL:
+def _to_sql(self, table: TableSQL) -> SQL:
     """Enhanced _to_sql that handles geospatial operators."""
     field_expr, operator, value = self.field_expr, self.operator, self.value
 
@@ -111,12 +111,13 @@ def _to_sql(self, model: BaseModel, alias: str, query: Query) -> SQL:
             f"{(field_expr, operator, value)}"
         )
 
+        model: BaseModel = table._model
         field = self._field(model)
-        model._check_field_access(field, "read")
-        return field.condition_to_sql(field_expr, operator, value, model, alias, query)
+        model.check_field_access(field, "read")
+        return field.condition_to_sql(table, field_expr, operator, value)
 
     # For all other operators, use the original method
-    return original__to_sql(self, model, alias, query)
+    return original__to_sql(self, table)
 
 
 def _optimize_step(self, model: BaseModel, level: OptimizationLevel) -> Domain:
