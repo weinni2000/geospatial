@@ -4,7 +4,7 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component} from "@odoo/owl";
+import {Component, useProps} from "@odoo/owl";
 import {DomainSelectorFieldInput} from "../domain_selector_field_input/domain_selector_field_input.esm";
 import {DomainSelectorFieldInputForActiveIds} from "../domain_selector_field_input_for_active_ids/domain_selector_field_input_for_active_ids.esm";
 import {DomainSelectorFieldInputWithTags} from "../domain_selector_field_input_with_tags/domain_selector_field_input_with_tags.esm";
@@ -18,7 +18,11 @@ const dso = registry.category("domain_selector/operator");
  * This method is extended from DomainSelectorNumberField to add some operators
  * ("in active_ids", "not in active_ids", "in", "not in").
  */
-export class DomainSelectorNumberFieldExtend extends Component {}
+export class DomainSelectorNumberFieldExtend extends Component {
+    setup() {
+        this.props = useProps();
+    }
+}
 Object.assign(DomainSelectorNumberFieldExtend, {
     template: "base_geoengine.DomainSelectorNumberFieldExtend",
     components: {

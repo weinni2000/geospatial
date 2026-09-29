@@ -5,7 +5,7 @@
  */
 
 import {CheckBox} from "@web/core/checkbox/checkbox";
-import {Component, onWillStart, useRef, useState} from "@odoo/owl";
+import {Component, onWillStart, proxy, signal, useProps} from "@odoo/owl";
 import {DomainSelectorGeoFieldDialog} from "../../../widgets/domain_selector_geo_field/domain_selector_geo_field_dialog/domain_selector_geo_field_dialog.esm";
 import {FormViewDialog} from "@web/views/view_dialogs/form_view_dialog";
 import {_t} from "@web/core/l10n/translation";
@@ -18,11 +18,13 @@ import {vectorLayersStore} from "../../../vector_layers_store.esm";
 
 export class LayersPanel extends Component {
     setup() {
+        this.props = useProps();
         this.orm = useService("orm");
         this.actionService = useService("action");
         this.view = useService("view");
-        this.state = useState({geoengineLayers: {}, isFolded: false});
+        this.state = proxy({geoengineLayers: {}, isFolded: false});
         this.addDialog = useOwnedDialogs();
+        this.root = signal.ref();
 
         /**
          * Call the model method "get_geoengine_layers" to get all the layers
@@ -50,7 +52,7 @@ export class LayersPanel extends Component {
          */
         let dataRowId = "";
         useSortable({
-            ref: useRef("root"),
+            ref: this.root,
             elements: ".item",
             handle: ".fa-sort",
             onDragStart: (params) => {
@@ -214,11 +216,11 @@ export class LayersPanel extends Component {
     onEditFilterButtonSelected(vector) {
         this.addDialog(DomainSelectorGeoFieldDialog, {
             resModel: vector.model,
-            initialValue: vector.model_domain,
+            domain: vector.model_domain,
             readonly: false,
             isDebugMode: Boolean(this.env.debug),
             model: vector,
-            onSelected: (value) => this.onEditFilterDomainChanged(vector, value),
+            onConfirm: (value) => this.onEditFilterDomainChanged(vector, value),
             title: _t("Domain editing"),
         });
     }
@@ -285,8 +287,4 @@ export class LayersPanel extends Component {
 }
 
 LayersPanel.template = "base_geoengine.LayersPanel";
-LayersPanel.props = {
-    model: {type: String, optional: false},
-    vectorModel: {type: Object, optional: false},
-};
 LayersPanel.components = {CheckBox};

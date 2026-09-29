@@ -14,14 +14,17 @@ let geostats = null;
  */
 
 import {
-    App,
     Component,
+    effect,
+    mount,
     onMounted,
     onPatched,
     onWillStart,
+    onWillUnmount,
     onWillUpdateProps,
-    reactive,
-    useState,
+    proxy,
+    t,
+    useProps,
 } from "@odoo/owl";
 import {GeoengineRecord} from "../geoengine_record/geoengine_record.esm";
 import {LayersPanel} from "../layers_panel/layers_panel.esm";
@@ -53,19 +56,40 @@ const LEGEND_MAX_ITEMS = 10;
 
 export class GeoengineRenderer extends Component {
     setup() {
-        this.state = useState({selectedFeatures: [], isModified: false, isFit: false});
+        this.props = useProps({
+            isSavedOrDiscarded: t.boolean(),
+            archInfo: t.object(),
+            data: t.object(),
+            openRecord: t.function(),
+            editable: t.boolean().optional(),
+            updateRecord: t.function(),
+            onClickDiscard: t.function(),
+            createRecord: t.function(),
+            onDrawStart: t.function(),
+        });
+        this.state = proxy({selectedFeatures: [], isModified: false, isFit: false});
         this.models = [];
         this.cfg_models = [];
         this.vectorModel = {};
         this.legends = [];
 
-        // When a change is issued in the rasterLayersStore or the vectorLayersStore the LayerChanged method is called.
-        this.rasterLayersStore = reactive(rasterLayersStore, () =>
-            this.onRasterLayerChanged()
-        );
-        this.vectorLayersStore = reactive(vectorLayersStore, () =>
-            this.onVectorLayerChanged()
-        );
+        // Both stores are already reactive singletons (see raster_layers_store.esm
+        // and vector_layers_store.esm); no extra wrapping needed here.
+        this.rasterLayersStore = rasterLayersStore;
+        this.vectorLayersStore = vectorLayersStore;
+
+        // Re-apply raster/vector layer changes whenever the shared stores
+        // change. Owl 3 has no `reactive(store, callback)`: `effect()` is the
+        // equivalent, created in onMounted (see below) since it runs once
+        // immediately and needs this.map to already exist. onWillUnmount must
+        // be registered here, synchronously in setup(), since it requires the
+        // component scope that isn't available anymore once onMounted runs.
+        let cleanupRasterEffect = null;
+        let cleanupVectorEffect = null;
+        onWillUnmount(() => {
+            cleanupRasterEffect?.();
+            cleanupVectorEffect?.();
+        });
 
         this.orm = useService("orm");
         this.view = useService("view");
@@ -101,6 +125,9 @@ export class GeoengineRenderer extends Component {
             this.vectorSources = [];
             this.renderMap();
             this.renderVectorLayers();
+
+            cleanupRasterEffect = effect(() => this.onRasterLayerChanged());
+            cleanupVectorEffect = effect(() => this.onVectorLayerChanged());
         });
 
         onWillUpdateProps((nextProps) => {
@@ -566,7 +593,7 @@ export class GeoengineRenderer extends Component {
             record === undefined
                 ? model.records.find((element) => element._values.id === attributes.id)
                 : record;
-        const app = new App(GeoengineRecord, {
+        mount(GeoengineRecord, popup, {
             env: this.env,
             props: {
                 archInfo,
@@ -576,7 +603,6 @@ export class GeoengineRenderer extends Component {
             getTemplate,
             customDirectives,
         });
-        app.mount(popup);
     }
 
     /**
@@ -1312,15 +1338,4 @@ export class GeoengineRenderer extends Component {
 }
 
 GeoengineRenderer.template = "base_geoengine.GeoengineRenderer";
-GeoengineRenderer.props = {
-    isSavedOrDiscarded: {type: Boolean},
-    archInfo: {type: Object},
-    data: {type: Object},
-    openRecord: {type: Function},
-    editable: {type: Boolean, optional: true},
-    updateRecord: {type: Function},
-    onClickDiscard: {type: Function},
-    createRecord: {type: Function},
-    onDrawStart: {type: Function},
-};
 GeoengineRenderer.components = {LayersPanel, GeoengineRecord, RecordsPanel};

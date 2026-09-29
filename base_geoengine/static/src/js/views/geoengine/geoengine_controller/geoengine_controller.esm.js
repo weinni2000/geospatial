@@ -4,7 +4,7 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component, useState} from "@odoo/owl";
+import {Component, proxy, t, useProps} from "@odoo/owl";
 import {FormViewDialog} from "@web/views/view_dialogs/form_view_dialog";
 import {Layout} from "@web/search/layout";
 import {SearchBar} from "@web/search/search_bar/search_bar";
@@ -23,15 +23,22 @@ export class GeoengineController extends Component {
      * Setup the controller by using the useModel hook.
      */
     setup() {
-        this.state = useState({isSavedOrDiscarded: false});
+        this.props = useProps({
+            ...standardViewProps,
+            Model: t.function(),
+            Renderer: t.function(),
+            archInfo: t.object(),
+            defaultGroupBy: t.array(t.string()).optional(),
+        });
+        this.state = proxy({isSavedOrDiscarded: false});
         this.actionService = useService("action");
         this.view = useService("view");
         this.addDialog = useOwnedDialogs();
         this.editable = this.props.archInfo.editable;
         this.archInfo = this.props.archInfo;
-        this.model = useState(
-            useModelWithSampleData(this.props.Model, this.modelParams)
-        );
+        // UseModelWithSampleData already forces a re-render on model updates
+        // (via its own event bus), no extra reactivity wrapper needed.
+        this.model = useModelWithSampleData(this.props.Model, this.modelParams);
         this.searchBarToggler = useSearchBarToggler();
         /**
          * Allow you to display records on the map thanks to the paging located
@@ -83,7 +90,9 @@ export class GeoengineController extends Component {
                       activeFields: activeFields,
                       openGroupsByDefault: true,
                   };
-        this.props.searchMenuTypes = this.props.searchMenuTypes || [];
+        // This.props is read-only (Owl 3 props are signal-backed getters), so
+        // the fallback is kept local instead of writing back to this.props.
+        const searchMenuTypes = this.props.searchMenuTypes || [];
 
         return {
             config: modelConfig,
@@ -94,7 +103,7 @@ export class GeoengineController extends Component {
             limit: archInfo.limit || limit,
             countLimit: archInfo.countLimit,
             defaultOrderBy: archInfo.defaultOrder,
-            defaultGroupBy: this.props.searchMenuTypes.includes("groupBy")
+            defaultGroupBy: searchMenuTypes.includes("groupBy")
                 ? defaultGroupBy
                 : false,
             groupsLimit: archInfo.groupsLimit,
@@ -206,9 +215,3 @@ export class GeoengineController extends Component {
 
 GeoengineController.template = "base_geoengine.GeoengineController";
 GeoengineController.components = {Layout, SearchBar};
-GeoengineController.props = {
-    ...standardViewProps,
-    Model: Function,
-    Renderer: Function,
-    archInfo: Object,
-};

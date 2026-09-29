@@ -1,10 +1,11 @@
 /** @odoo-module **/
 
-import {Component, useRef} from "@odoo/owl";
+import {Component, signal, useProps} from "@odoo/owl";
 
 export class DomainSelectorFieldInputWithTags extends Component {
     setup() {
-        this.inputRef = useRef("input");
+        this.props = useProps();
+        this.input = signal.ref();
     }
 
     removeTag(tagIndex) {
@@ -17,8 +18,8 @@ export class DomainSelectorFieldInputWithTags extends Component {
     }
 
     onBtnClick() {
-        const value = this.inputRef.el.value;
-        this.inputRef.el.value = "";
+        const value = this.input().value;
+        this.input().value = "";
         this.addTag(value);
     }
 }

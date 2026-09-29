@@ -4,7 +4,7 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component} from "@odoo/owl";
+import {Component, useProps} from "@odoo/owl";
 import {DomainSelectorGeoFieldInput} from "../domain_selector_geo_field_input/domain_selector_geo_field_input.esm";
 import {_t} from "@web/core/l10n/translation";
 import {onDidChange} from "../domain_selector_operators.esm";
@@ -16,7 +16,11 @@ const dsf = registry.category("domain_selector/fields");
  * This class allows you to adapt the right-hand operand and the operator of the domain
  * if the selected field is of type geo_field.
  */
-export class DomainSelectorGeoField extends Component {}
+export class DomainSelectorGeoField extends Component {
+    setup() {
+        this.props = useProps();
+    }
+}
 Object.assign(DomainSelectorGeoField, {
     template: "base_geoengine.DomainSelectorGeoField",
     components: {

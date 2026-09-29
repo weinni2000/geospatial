@@ -720,42 +720,50 @@ class TestModel(TransactionCase):
         self.assertEqual(len(result), 2)
 
     def test_geo_search_indirect_respects_record_rules(self):
-        """Indirect geo-operator sub-queries must enforce ir.rule security.
+        """Indirect geo-operator sub-queries must enforce ir.access security.
 
         Regression test: the 19.0 migration replaced ``_apply_ir_rules`` (removed
         in 19.0) by ``_check_field_access``, which no longer applied record rules
         to the spatial sub-query. A restricted user could therefore match related
         records they are not allowed to read.
+
+        In 20.0, ``ir.model.access`` and ``ir.rule`` were merged into ``ir.access``:
+        group-scoped accesses are permissions (OR-ed together), while accesses
+        without a group are restrictions (AND-ed for everyone). To keep the
+        "restricted user only sees Mollens" scenario meaningful, the admin and
+        the restricted user must be granted access to "dummy.zip" through
+        *different*, non-overlapping groups (otherwise the broader group's
+        permission would be OR-ed back in for the restricted user too).
         """
         model_zip = self.env["ir.model"]._get("dummy.zip")
         model_retail = self.env["ir.model"]._get("retail.machine")
         # Test models have no ACL: grant model-level read so the access check
         # fails on the *record rule*, not on model access.
-        self.env["ir.model.access"].create(
+        self.env["ir.access"].create(
             [
-                {
-                    "name": "dummy.zip read (test)",
-                    "model_id": model_zip.id,
-                    "group_id": self.env.ref("base.group_user").id,
-                    "perm_read": True,
-                },
                 {
                     "name": "retail.machine read (test)",
                     "model_id": model_retail.id,
                     "group_id": self.env.ref("base.group_user").id,
-                    "perm_read": True,
+                    "operation": "r",
+                },
+                {
+                    "name": "dummy.zip read for admins (test)",
+                    "model_id": model_zip.id,
+                    "group_id": self.env.ref("base.group_system").id,
+                    "operation": "r",
                 },
             ]
         )
         # Restricted user may only see the "Mollens" zip, not "Yens" (zip 1169).
         group = self.env["res.groups"].create({"name": "Geo Restricted (test)"})
-        self.env["ir.rule"].create(
+        self.env["ir.access"].create(
             {
                 "name": "Only Mollens zips (test)",
                 "model_id": model_zip.id,
-                "groups": [(6, 0, [group.id])],
-                "domain_force": "[('city', '=', 'Mollens (VD))')]",
-                "perm_read": True,
+                "group_id": group.id,
+                "operation": "r",
+                "domain": "[('city', '=', 'Mollens (VD))')]",
             }
         )
         user = self.env["res.users"].create(

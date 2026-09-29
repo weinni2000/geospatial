@@ -9,7 +9,7 @@ import {GeoengineCompiler} from "../geoengine_compiler.esm";
 import {INFO_BOX_ATTRIBUTE} from "../geoengine_arch_parser.esm";
 import {registry} from "@web/core/registry";
 import {useViewCompiler} from "@web/views/view_compiler";
-import {Component, onWillUpdateProps} from "@odoo/owl";
+import {Component, onWillUpdateProps, useProps} from "@odoo/owl";
 import {user} from "@web/core/user";
 
 const formatters = registry.category("formatters");
@@ -26,6 +26,7 @@ export class GeoengineRecord extends Component {
      * Setup the record by compiling the arch and the info-box template.
      */
     setup() {
+        this.props = useProps();
         const {Compiler, templates} = this.props;
         const ViewCompiler = Compiler || this.constructor.Compiler;
 
