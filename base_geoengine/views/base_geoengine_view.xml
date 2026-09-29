@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
     <menuitem
-        name="GeoEngine Backend"
         id="geoengine_base_menu"
+        name="GeoEngine Backend"
         web_icon="base_geoengine,images/map.png"
         groups="group_geoengine_admin"
     />

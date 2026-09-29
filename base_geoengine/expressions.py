@@ -51,7 +51,7 @@ def _condition_to_sql(
     This method has been monkey patched in order to be able to include
     geo_operators into the Odoo search method.
     """
-    if operator in GEO_OPERATORS.keys():
+    if operator in GEO_OPERATORS:
         current_field = model._fields.get(field_expr)
         current_operator = GeoOperator(current_field)
         if current_field and isinstance(current_field, GeoField):

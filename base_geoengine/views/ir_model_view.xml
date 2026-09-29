@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
-    <record model="ir.ui.view" id="view_model_fields_form_geo">
+    <record id="view_model_fields_form_geo" model="ir.ui.view">
         <!-- must be unique in this module. -->
         <field name="name">ir.model.fields.form.geo</field>
         <field name="model">ir.model.fields</field>

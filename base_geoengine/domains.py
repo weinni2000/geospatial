@@ -61,7 +61,7 @@ def checked(self) -> DomainCondition:
     # - records are not accepted, use values
     # - Query and Domain values should be using a relational operator
     # <MOD>
-    # from .models import BaseModel  # noqa: PLC0415
+    # from .models import BaseModel
     # </MOD>
 
     value = self.value
