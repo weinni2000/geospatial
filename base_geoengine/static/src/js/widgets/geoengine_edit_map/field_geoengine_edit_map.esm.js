@@ -10,14 +10,20 @@ let chroma = null;
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component, onMounted, onRendered, onWillStart, useEffect} from "@odoo/owl";
+import {Component, onMounted, onPatched, onWillStart, t, useProps} from "@odoo/owl";
 import {loadMapLibs} from "../../geoengine_libs.esm";
 import {registry} from "@web/core/registry";
 import {standardFieldProps} from "@web/views/fields/standard_field_props";
+import {useLayoutEffect} from "@web/owl2/utils";
 import {useService} from "@web/core/utils/hooks";
 
 export class FieldGeoEngineEditMap extends Component {
     setup() {
+        this.props = useProps({
+            ...standardFieldProps,
+            opacity: t.number().optional(),
+            color: t.string().optional(),
+        });
         // Allows you to have a unique id if you put the same field in the view several times
         this.id = `map_${this.props.id}`;
         this.orm = useService("orm");
@@ -46,7 +52,7 @@ export class FieldGeoEngineEditMap extends Component {
             this.setValue(this.props.record.data[this.props.name]);
         });
 
-        useEffect(
+        useLayoutEffect(
             () => {
                 if (!this.props.readonly && this.map !== undefined) {
                     this.setupControls();
@@ -56,9 +62,13 @@ export class FieldGeoEngineEditMap extends Component {
         );
 
         // Is executed after component is rendered. When we use pagination.
-        onRendered(() => {
+        // Owl 3 has no onRendered hook anymore: onMounted + onPatched together
+        // cover "after every render" (initial and subsequent).
+        const setDisplayedValue = () => {
             this.setValue(this.props.record.data[this.props.name]);
-        });
+        };
+        onMounted(setDisplayedValue);
+        onPatched(setDisplayedValue);
     }
 
     /**
@@ -262,11 +272,6 @@ export class FieldGeoEngineEditMap extends Component {
 }
 
 FieldGeoEngineEditMap.template = "base_geoengine.FieldGeoEngineEditMap";
-FieldGeoEngineEditMap.props = {
-    ...standardFieldProps,
-    opacity: {type: Number, optional: true},
-    color: {type: String, optional: true},
-};
 
 FieldGeoEngineEditMap.extractProps = (attrs) => {
     return {

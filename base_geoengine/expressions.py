@@ -7,8 +7,9 @@ import string
 
 from odoo import fields
 from odoo.fields import Domain
-from odoo.models import BaseModel
-from odoo.tools import SQL, Query
+from odoo.models import Query
+from odoo.orm.query import TableSQL
+from odoo.tools import SQL
 
 from .fields import GeoField
 from .geo_operators import GeoOperator
@@ -40,17 +41,17 @@ GEO_SQL_OPERATORS = {
 
 def _condition_to_sql(
     self,
+    table: TableSQL,
     field_expr: str,
     operator: str,
     value,
-    model: BaseModel,
-    alias: str,
-    query: Query,
 ) -> SQL:
     """
     This method has been monkey patched in order to be able to include
     geo_operators into the Odoo search method.
     """
+    model = table._model
+    alias = table._alias
     if operator in GEO_OPERATORS:
         current_field = model._fields.get(field_expr)
         current_operator = GeoOperator(current_field)
@@ -83,24 +84,32 @@ def _condition_to_sql(
                         # inside where_calc(), mirroring BaseModel._search().
                         if operator == "geo_equal":
                             rel_query.add_where(
-                                f'"{alias}"."{field_expr}" {GEO_OPERATORS[operator]} '
-                                f"{rel_alias}.{rel_col}"
+                                SQL(
+                                    f'"{alias}"."{field_expr}" '
+                                    f"{GEO_OPERATORS[operator]} "
+                                    f"{rel_alias}.{rel_col}"
+                                )
                             )
                         elif operator in ("geo_greater", "geo_lesser"):
                             rel_query.add_where(
-                                f"ST_Area({alias}.{field_expr}) "
-                                f"{GEO_OPERATORS[operator]} "
-                                f"ST_Area({rel_alias}.{rel_col})"
+                                SQL(
+                                    f"ST_Area({alias}.{field_expr}) "
+                                    f"{GEO_OPERATORS[operator]} "
+                                    f"ST_Area({rel_alias}.{rel_col})"
+                                )
                             )
                         else:
                             rel_query.add_where(
-                                f'{GEO_OPERATORS[operator]}("{alias}"."{field_expr}", '
-                                f"{rel_alias}.{rel_col})"
+                                SQL(
+                                    f"{GEO_OPERATORS[operator]}("
+                                    f'"{alias}"."{field_expr}", '
+                                    f"{rel_alias}.{rel_col})"
+                                )
                             )
 
-                        subquery_sql = rel_query.subselect("1")
+                        subquery_sql = rel_query.subselect(SQL("1"))
                         sub_query_mogrified = (
-                            model.env.cr.mogrify(subquery_sql.code, subquery_sql.params)
+                            model.env.cr.mogrify(subquery_sql)
                             .decode("utf-8")
                             .replace(f"'{rel_model._table}'", f'"{rel_model._table}"')
                             .replace("%", "%%")
@@ -112,15 +121,7 @@ def _condition_to_sql(
                     current_operator, operator, field_expr, value, params, model._table
                 )
             return SQL(query_str, *params)
-    return original___condition_to_sql(
-        self,
-        field_expr=field_expr,
-        operator=operator,
-        value=value,
-        model=model,
-        alias=alias,
-        query=query,
-    )
+    return original___condition_to_sql(self, table, field_expr, operator, value)
 
 
 fields.Field._condition_to_sql = _condition_to_sql
@@ -162,18 +163,22 @@ def where_calc(model, domain, active_test=True, alias=None):
     """
     # if the object has an active field ('active', 'x_active'), filter out all
     # inactive records unless they were explicitly asked for
-    if model._active_name and active_test and model._context.get("active_test", True):
-        # the item[0] trick below works for domain items and '&'/'|'/'!'
-        # operators too
-        if not any(item[0] == model._active_name for item in domain):
-            domain = [(model._active_name, "=", 1)] + domain
+    # the item[0] trick below works for domain items and '&'/'|'/'!'
+    # operators too
+    if (
+        model._active_name
+        and active_test
+        and model._context.get("active_test", True)
+        and not any(item[0] == model._active_name for item in domain)
+    ):
+        domain = [(model._active_name, "=", 1)] + domain
 
-    query = Query(model.env, alias, model._table)
+    query = Query(model, alias)
+    table = query.table
     if domain:
-        # In Odoo 19, create Domain object and use its _to_sql method
         domain_obj = Domain(domain)
         optimized_domain = domain_obj.optimize_full(model)
-        sql_condition = optimized_domain._to_sql(model, alias, query)
+        sql_condition = optimized_domain._to_sql(table)
         query.add_where(sql_condition)
 
     # Apply record rules, like BaseModel._search does. Skipped for the
@@ -181,11 +186,11 @@ def where_calc(model, domain, active_test=True, alias=None):
     if not model.env.su:
         model.browse().check_access("read")
         model_sudo = model.sudo().with_context(active_test=False)
-        sec_domain = model.env["ir.rule"]._compute_domain(model._name, "read")
+        sec_domain = model._access_domain("read")
         sec_domain = sec_domain.optimize_full(model_sudo)
         if sec_domain.is_false():
             query.add_where(SQL("FALSE"))
         elif not sec_domain.is_true():
-            query.add_where(sec_domain._to_sql(model_sudo, alias, query))
+            query.add_where(sec_domain._to_sql(table._with_model(model_sudo)))
 
     return query

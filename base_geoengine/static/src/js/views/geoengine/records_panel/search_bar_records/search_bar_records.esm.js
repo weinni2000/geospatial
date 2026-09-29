@@ -4,11 +4,12 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component, useRef} from "@odoo/owl";
+import {Component, signal, useProps} from "@odoo/owl";
 
 export class SearchBarRecords extends Component {
     setup() {
-        this.searchComponentRef = useRef("searchComponent");
+        this.props = useProps();
+        this.searchComponent = signal.ref();
     }
 
     /**
@@ -16,13 +17,10 @@ export class SearchBarRecords extends Component {
      * @param {*} ev
      */
     onInputKeyup(ev) {
-        this.props.onInputKeyup(this.searchComponentRef.el.value);
+        this.props.onInputKeyup(this.searchComponent().value);
         ev.preventDefault();
         ev.stopPropagation();
     }
 }
 
 SearchBarRecords.template = "base_geoengine.SearchBarRecords";
-SearchBarRecords.props = {
-    onInputKeyup: {type: Function},
-};

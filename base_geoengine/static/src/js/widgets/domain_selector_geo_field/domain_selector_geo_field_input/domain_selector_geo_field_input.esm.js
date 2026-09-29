@@ -4,7 +4,7 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component, onWillStart, onWillUpdateProps, useState} from "@odoo/owl";
+import {Component, onWillStart, onWillUpdateProps, proxy, useProps} from "@odoo/owl";
 import {Domain} from "@web/core/domain";
 import {DomainSelectorGeoFieldDialog} from "../domain_selector_geo_field_dialog/domain_selector_geo_field_dialog.esm";
 import {ModelFieldSelector} from "@web/core/model_field_selector/model_field_selector";
@@ -18,7 +18,8 @@ import {useOwnedDialogs} from "@web/core/utils/hooks";
  */
 export class DomainSelectorGeoFieldInput extends Component {
     setup() {
-        this.state = useState({
+        this.props = useProps();
+        this.state = proxy({
             resModel: "",
             fieldName: "",
             subField: "",
@@ -89,15 +90,15 @@ export class DomainSelectorGeoFieldInput extends Component {
      * edit the sub-domain.
      */
     display() {
-        const initialValue =
+        const domain =
             this.state.domain === undefined ? "[]" : this.state.domain.toString();
         this.addDialog(DomainSelectorGeoFieldDialog, {
             resModel: this.state.resModel,
-            initialValue,
+            domain,
             readonly: false,
             isDebugMode: Boolean(this.env.debug),
             fieldName: this.state.fieldName,
-            onSelected: (value) => this.update(value),
+            onConfirm: (value) => this.update(value),
             title: this.env._t("Subdomain"),
         });
     }

@@ -1,10 +1,14 @@
 /** @odoo-module **/
 
-import {Component} from "@odoo/owl";
+import {Component, useProps} from "@odoo/owl";
 import {registry} from "@web/core/registry";
 const parsers = registry.category("parsers");
 
 export class DomainSelectorFieldInput extends Component {
+    setup() {
+        this.props = useProps();
+    }
+
     parseValue(value) {
         const parser = parsers.get(this.props.field.type, (val) => val);
         try {
