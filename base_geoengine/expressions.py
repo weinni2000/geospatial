@@ -83,21 +83,25 @@ def _condition_to_sql(
                         # Access rights and record rules (ir.access) on the related
                         # model are applied inside where_calc(), mirroring
                         # BaseModel._search().
+                        left_sql = SQL.identifier(alias, field_expr)
+                        right_sql = SQL.identifier(rel_alias, rel_col)
+                        sql_operator = GEO_SQL_OPERATORS[operator]
                         if operator == "geo_equal":
                             rel_query.add_where(
-                                f'"{alias}"."{field_expr}" {GEO_OPERATORS[operator]} '
-                                f"{rel_alias}.{rel_col}"
+                                SQL("%s %s %s", left_sql, sql_operator, right_sql)
                             )
                         elif operator in ("geo_greater", "geo_lesser"):
                             rel_query.add_where(
-                                f"ST_Area({alias}.{field_expr}) "
-                                f"{GEO_OPERATORS[operator]} "
-                                f"ST_Area({rel_alias}.{rel_col})"
+                                SQL(
+                                    "ST_Area(%s) %s ST_Area(%s)",
+                                    left_sql,
+                                    sql_operator,
+                                    right_sql,
+                                )
                             )
                         else:
                             rel_query.add_where(
-                                f'{GEO_OPERATORS[operator]}("{alias}"."{field_expr}", '
-                                f"{rel_alias}.{rel_col})"
+                                SQL("%s(%s, %s)", sql_operator, left_sql, right_sql)
                             )
 
                         subquery_sql = rel_query.subselect(SQL("1"))
