@@ -18,6 +18,7 @@ import {DebugModePlugin} from "@web/core/debug_mode_plugin";
 import {Domain} from "@web/core/domain";
 import {DomainSelectorGeoFieldDialog} from "../domain_selector_geo_field_dialog/domain_selector_geo_field_dialog.esm";
 import {Expression} from "@web/core/tree_editor/condition_tree";
+import {MultiRecordSelector} from "@web/core/record_selectors/multi_record_selector";
 import {Select} from "@web/core/tree_editor/tree_editor_components";
 import {_t} from "@web/core/l10n/translation";
 import {formatAST} from "@web/core/py_js/py";
@@ -95,13 +96,49 @@ export function makeGeoValue({resModel, fieldName, domain = "[]"} = {}) {
 }
 
 /**
- * Value editor of the domain selector for the geo operators: either the
- * records of a model (through one of its geo fields, filtered by a
- * sub-domain) or a WKT/GeoJSON geometry.
+ * Return the ids of a sub-domain selecting records by id
+ * ([("id", "in", [...])], or [] for all the records), null for any other
+ * sub-domain.
+ * @param {String} domain
+ * @returns {Number[]|null}
+ */
+export function getRecordIds(domain) {
+    let conditions = null;
+    try {
+        conditions = new Domain(domain).toList({});
+    } catch {
+        return null;
+    }
+    if (!conditions.length) {
+        return [];
+    }
+    const [condition] = conditions;
+    if (
+        conditions.length === 1 &&
+        Array.isArray(condition) &&
+        condition[0] === "id" &&
+        condition[1] === "in" &&
+        Array.isArray(condition[2]) &&
+        condition[2].every((id) => Number.isInteger(id))
+    ) {
+        return condition[2];
+    }
+    return null;
+}
+
+function makeRecordsDomain(ids) {
+    return ids.length ? `[("id", "in", [${ids.join(", ")}])]` : "[]";
+}
+
+/**
+ * Value editor of the domain selector for the geo operators: either records
+ * of a model (through one of its geo fields), picked like the records of a
+ * many2one or filtered by a sub-domain, or a WKT/GeoJSON geometry. The
+ * reference (mode, model and geo field) is folded into a summary once set.
  */
 export class DomainSelectorGeoFieldInput extends Component {
     static template = "base_geoengine.DomainSelectorGeoFieldInput";
-    static components = {Select};
+    static components = {MultiRecordSelector, Select};
     props = useProps({
         value: t.any(),
         update: t.function(),
@@ -113,7 +150,13 @@ export class DomainSelectorGeoFieldInput extends Component {
         this.treeProcessor = useService("tree_processor");
         this.addDialog = useOwnedDialogs();
         this.debugMode = usePlugin(DebugModePlugin);
-        this.state = proxy({referenceModels: [], domainDescription: ""});
+        const geoValue = this.getGeoValue();
+        this.state = proxy({
+            referenceModels: [],
+            domainDescription: "",
+            isReferenceFolded:
+                geoValue.mode === "geometry" || Boolean(geoValue.resModel),
+        });
         this.modeOptions = [
             ["records", _t("records of")],
             ["geometry", _t("geometry")],
@@ -129,47 +172,75 @@ export class DomainSelectorGeoFieldInput extends Component {
         onWillUpdateProps((nextProps) => this.loadDomainDescription(nextProps));
     }
 
-    get geoValue() {
+    getGeoValue() {
         return parseGeoValue(this.props.value) || {mode: "records"};
     }
 
-    get modelOptions() {
+    getReferenceModel(resModel) {
+        return this.state.referenceModels.find((model) => model.model === resModel);
+    }
+
+    getModelOptions() {
         return this.state.referenceModels.map((info) => [info.model, info.name]);
     }
 
-    get modelPlaceholder() {
+    getModelPlaceholder() {
         return _t("Select a model");
     }
 
-    get fieldOptions() {
-        const info = this.state.referenceModels.find(
-            (model) => model.model === this.geoValue.resModel
-        );
-        return info ? info.fields : [];
+    getFieldOptions(geoValue) {
+        return this.getReferenceModel(geoValue.resModel)?.fields || [];
+    }
+
+    /**
+     * Summary of the folded reference, e.g. "Contact > geom Grenzen".
+     * @param {Object} geoValue
+     * @returns {String}
+     */
+    getReferenceSummary(geoValue) {
+        if (geoValue.mode === "geometry") {
+            return _t("Geometry");
+        }
+        const info = this.getReferenceModel(geoValue.resModel);
+        if (!info) {
+            return this.getModelPlaceholder();
+        }
+        const field = info.fields.find(([name]) => name === geoValue.fieldName);
+        return field ? `${info.name} \u203a ${field[1]}` : info.name;
+    }
+
+    getRecordIds(geoValue) {
+        return getRecordIds(geoValue.domain);
+    }
+
+    getRecordsPlaceholder(geoValue) {
+        return _t("All %(model)s records", {
+            model: this.getReferenceModel(geoValue.resModel)?.name || geoValue.resModel,
+        });
     }
 
     async loadDomainDescription(props) {
         const {mode, resModel, domain} = parseGeoValue(props.value) || {};
         let description = "";
-        if (mode === "records" && resModel) {
-            if (new Domain(domain).toString() === "[]") {
-                description = _t("all records");
-            } else {
-                try {
-                    const tree = await this.treeProcessor.treeFromDomain(
-                        resModel,
-                        new Domain(domain)
-                    );
-                    description = await this.treeProcessor.getDomainTreeDescription(
-                        resModel,
-                        tree
-                    );
-                } catch {
-                    description = domain;
-                }
+        if (mode === "records" && resModel && getRecordIds(domain) === null) {
+            try {
+                const tree = await this.treeProcessor.treeFromDomain(
+                    resModel,
+                    new Domain(domain)
+                );
+                description = await this.treeProcessor.getDomainTreeDescription(
+                    resModel,
+                    tree
+                );
+            } catch {
+                description = domain;
             }
         }
         this.state.domainDescription = description;
+    }
+
+    toggleReference() {
+        this.state.isReferenceFolded = !this.state.isReferenceFolded;
     }
 
     onModeChange(mode) {
@@ -177,14 +248,17 @@ export class DomainSelectorGeoFieldInput extends Component {
     }
 
     onModelChange(resModel) {
-        const info = this.state.referenceModels.find(
-            (model) => model.model === resModel
-        );
+        const info = this.getReferenceModel(resModel);
         this.props.update(makeGeoValue({resModel, fieldName: info?.fields[0]?.[0]}));
     }
 
     onFieldChange(fieldName) {
-        this.props.update(makeGeoValue({...this.geoValue, fieldName}));
+        this.props.update(makeGeoValue({...this.getGeoValue(), fieldName}));
+    }
+
+    onRecordsChange(ids) {
+        const domain = makeRecordsDomain([...new Set(ids)]);
+        this.props.update(makeGeoValue({...this.getGeoValue(), domain}));
     }
 
     onGeometryChange(ev) {
@@ -192,7 +266,7 @@ export class DomainSelectorGeoFieldInput extends Component {
     }
 
     openDomainDialog() {
-        const geoValue = this.geoValue;
+        const geoValue = this.getGeoValue();
         this.addDialog(DomainSelectorGeoFieldDialog, {
             resModel: geoValue.resModel,
             domain: geoValue.domain,

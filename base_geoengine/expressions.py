@@ -115,19 +115,11 @@ def _condition_to_sql(
                             SQL("%s(%s, %s)", sql_operator, left_sql, right_sql)
                         )
 
-                    subquery_sql = rel_query.subselect(SQL("1"))
-                    sub_query_mogrified = (
-                        model.env.cr.mogrify(subquery_sql)
-                        .decode("utf-8")
-                        .replace(f"'{rel_model._table}'", f'"{rel_model._table}"')
-                        .replace("%", "%%")
-                    )
-                    sub_queries.append(f"EXISTS({sub_query_mogrified})")
-                query_str = " AND ".join(sub_queries)
-            else:
-                query_str = get_geo_func(
-                    current_operator, operator, field_expr, value, params, model._table
-                )
+                    sub_queries.append(SQL("EXISTS(%s)", rel_query.subselect(SQL("1"))))
+                return SQL(" AND ").join(sub_queries)
+            query_str = get_geo_func(
+                current_operator, operator, field_expr, value, params, alias
+            )
             return SQL(query_str, *params)
     return original___condition_to_sql(
         self,
@@ -182,7 +174,7 @@ def where_calc(model, domain, active_test=True, alias=None):
     if (
         model._active_name
         and active_test
-        and model._context.get("active_test", True)
+        and model.env.context.get("active_test", True)
         and not any(item[0] == model._active_name for item in domain)
     ):
         domain = [(model._active_name, "=", 1)] + domain

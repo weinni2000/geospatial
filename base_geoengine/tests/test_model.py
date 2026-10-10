@@ -442,6 +442,78 @@ class TestModel(TransactionCase):
         )
         self.assertEqual(len(result.ids), 5)
 
+    def test_search_indirect_value_equal_to_table_name(self):
+        """A sub-domain value equal to the related table name is a plain value."""
+        result = self.env["retail.machine"].search(
+            [
+                (
+                    "the_point",
+                    "geo_intersect",
+                    {"dummy.zip.the_geom": [("name", "=", "dummy_zip")]},
+                )
+            ]
+        )
+        self.assertFalse(result)
+
+    def test_search_indirect_with_geo_sub_condition(self):
+        """A direct geo condition inside an indirect sub-domain uses its alias."""
+        retails = self.env["retail.machine"]
+        zip_item = self.env["dummy.zip"].search([("name", "ilike", "1169")])
+        expected = retails.search(
+            [
+                (
+                    "the_point",
+                    "geo_intersect",
+                    {"dummy.zip.the_geom": [("id", "=", zip_item.id)]},
+                )
+            ]
+        )
+        result = retails.search(
+            [
+                (
+                    "the_point",
+                    "geo_intersect",
+                    {
+                        "dummy.zip.the_geom": [
+                            ("the_geom", "geo_contains", expected[0].the_point.wkt)
+                        ]
+                    },
+                )
+            ]
+        )
+        self.assertEqual(result, expected)
+
+    def test_search_indirect_empty_sub_domain(self):
+        """An empty sub-domain matches against all the related records."""
+        retails = self.env["retail.machine"]
+        zip_ids = self.env["dummy.zip"].search([]).ids
+        result = retails.search(
+            [("the_point", "geo_intersect", {"dummy.zip.the_geom": []})]
+        )
+        expected = retails.search(
+            [
+                (
+                    "the_point",
+                    "geo_intersect",
+                    {"dummy.zip.the_geom": [("id", "in", zip_ids)]},
+                )
+            ]
+        )
+        self.assertTrue(result)
+        self.assertEqual(result, expected)
+
+    def test_search_invalid_geo_value(self):
+        """Invalid geo values are reported as ValueError, not as SQL errors."""
+        retails = self.env["retail.machine"]
+        for value in ({}, {"no.such.model.field": []}, "not a geometry"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                retails.search([("the_point", "geo_intersect", value)])
+
+    def test_search_operator_stays_case_sensitive(self):
+        """Adding the geo operators keeps the core operator validation."""
+        with self.assertRaises(ValueError):
+            self.env["retail.machine"].search([("name", "ILIKE", "21")])
+
     def test_search_intersect_for_zip_1169_with_multiple_domain(self):
         retails = self.env["retail.machine"]
         result = retails.search(

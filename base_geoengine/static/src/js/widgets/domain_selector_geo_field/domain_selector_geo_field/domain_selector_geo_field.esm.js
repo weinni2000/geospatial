@@ -6,6 +6,7 @@
 
 import {
     DomainSelectorGeoFieldInput,
+    getRecordIds,
     isGeoValue,
     loadGeoReferenceModels,
     makeGeoValue,
@@ -189,7 +190,7 @@ patch(treeProcessorService, {
 
     start(env, services) {
         const treeProcessor = super.start(env, services);
-        const {field: fieldService, orm} = services;
+        const {field: fieldService, name: nameService, orm} = services;
         const {getDomainTreeDescription, makeGetConditionDescription} = treeProcessor;
 
         async function getGeoValueDescription(resModel, value, describeTree) {
@@ -205,8 +206,19 @@ patch(treeProcessorService, {
                 (model) => model.model === geoValue.resModel
             );
             const modelName = info?.name || geoValue.resModel;
-            if (new Domain(geoValue.domain).toString() === "[]") {
+            const recordIds = getRecordIds(geoValue.domain);
+            if (recordIds && !recordIds.length) {
                 return modelName;
+            }
+            if (recordIds) {
+                const displayNames = await nameService.loadDisplayNames(
+                    geoValue.resModel,
+                    recordIds
+                );
+                const names = recordIds.map((id) =>
+                    typeof displayNames[id] === "string" ? displayNames[id] : String(id)
+                );
+                return `${modelName} (${names.join(", ")})`;
             }
             const subTree = await treeProcessor.treeFromDomain(
                 geoValue.resModel,
