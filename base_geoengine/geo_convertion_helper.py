@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 try:
     import geojson
     from shapely import wkb, wkt
+    from shapely.errors import ShapelyError
     from shapely.geometry import shape
     from shapely.geometry.base import BaseGeometry
 except ImportError:
@@ -33,7 +34,15 @@ def value_to_shape(value, use_wkb=False):
                 int(value, 16)
                 return wkb.loads(value, hex=True)
             except Exception:
-                return wkt.loads(value)
+                try:
+                    return wkt.loads(value)
+                except ShapelyError as exc:
+                    # Raise a ValueError so callers like the domain validator
+                    # treat it as invalid input instead of a server error
+                    raise ValueError(
+                        f"Invalid geometry value (expected WKT, WKB or GeoJSON): "
+                        f"{value!r}"
+                    ) from exc
     elif hasattr(value, "wkt"):
         if isinstance(value, BaseGeometry):
             return value

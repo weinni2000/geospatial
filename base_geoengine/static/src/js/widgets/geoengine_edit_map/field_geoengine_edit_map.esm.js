@@ -10,7 +10,7 @@ let chroma = null;
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component, onMounted, onWillStart} from "@odoo/owl";
+import {Component, onMounted, onWillStart, t, useProps} from "@odoo/owl";
 import {loadMapLibs} from "../../geoengine_libs.esm";
 import {registry} from "@web/core/registry";
 import {standardFieldProps} from "@web/views/fields/standard_field_props";
@@ -18,6 +18,12 @@ import {useLayoutEffect} from "@web/owl2/utils";
 import {useService} from "@web/core/utils/hooks";
 
 export class FieldGeoEngineEditMap extends Component {
+    props = useProps({
+        ...standardFieldProps,
+        opacity: t.number().optional(),
+        color: t.string().optional(),
+    });
+
     setup() {
         // Allows you to have a unique id if you put the same field in the view several times
         this.id = `map_${this.props.id}`;
@@ -263,12 +269,6 @@ export class FieldGeoEngineEditMap extends Component {
 }
 
 FieldGeoEngineEditMap.template = "base_geoengine.FieldGeoEngineEditMap";
-FieldGeoEngineEditMap.props = {
-    ...standardFieldProps,
-    opacity: {type: Number, optional: true},
-    color: {type: String, optional: true},
-};
-
 FieldGeoEngineEditMap.extractProps = (attrs) => {
     return {
         opacity: attrs.options.opacity,

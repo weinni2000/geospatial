@@ -61,57 +61,68 @@ def _condition_to_sql(
                 # We are having indirect geo_operator like (‘geom’, ‘geo_...’,
                 # {‘res.zip.poly’: [‘id’, ‘in’, [1,2,3]] })
                 ref_search = value
+                if not ref_search:
+                    raise ValueError(
+                        f"Missing geo reference for {field_expr!r}: expected "
+                        f"{{'<model>.<geo field>': <domain>}}"
+                    )
                 sub_queries = []
                 for key in ref_search:
                     i = key.rfind(".")
                     rel_model_name = key[0:i]
                     rel_col = key[i + 1 :]
+                    if rel_model_name not in model.env or not isinstance(
+                        model.env[rel_model_name]._fields.get(rel_col), GeoField
+                    ):
+                        raise ValueError(
+                            f"Invalid geo reference {key!r}: expected "
+                            f"'<model>.<geo field>'"
+                        )
                     rel_model = model.env[rel_model_name]
                     # we compute the attributes search on spatial rel
-                    if ref_search[key]:
-                        rel_alias = (
-                            rel_model._table
-                            + "_"
-                            + "".join(random.choices(string.ascii_lowercase, k=5))
+                    rel_alias = (
+                        rel_model._table
+                        + "_"
+                        + "".join(random.choices(string.ascii_lowercase, k=5))
+                    )
+                    rel_query = where_calc(
+                        rel_model,
+                        ref_search[key],
+                        active_test=True,
+                        alias=rel_alias,
+                    )
+                    # Access rights and record rules (ir.access) on the related
+                    # model are applied inside where_calc(), mirroring
+                    # BaseModel._search().
+                    left_sql = SQL.identifier(alias, field_expr)
+                    right_sql = SQL.identifier(rel_alias, rel_col)
+                    sql_operator = GEO_SQL_OPERATORS[operator]
+                    if operator == "geo_equal":
+                        rel_query.add_where(
+                            SQL("%s %s %s", left_sql, sql_operator, right_sql)
                         )
-                        rel_query = where_calc(
-                            rel_model,
-                            ref_search[key],
-                            active_test=True,
-                            alias=rel_alias,
+                    elif operator in ("geo_greater", "geo_lesser"):
+                        rel_query.add_where(
+                            SQL(
+                                "ST_Area(%s) %s ST_Area(%s)",
+                                left_sql,
+                                sql_operator,
+                                right_sql,
+                            )
                         )
-                        # Access rights and record rules (ir.access) on the related
-                        # model are applied inside where_calc(), mirroring
-                        # BaseModel._search().
-                        left_sql = SQL.identifier(alias, field_expr)
-                        right_sql = SQL.identifier(rel_alias, rel_col)
-                        sql_operator = GEO_SQL_OPERATORS[operator]
-                        if operator == "geo_equal":
-                            rel_query.add_where(
-                                SQL("%s %s %s", left_sql, sql_operator, right_sql)
-                            )
-                        elif operator in ("geo_greater", "geo_lesser"):
-                            rel_query.add_where(
-                                SQL(
-                                    "ST_Area(%s) %s ST_Area(%s)",
-                                    left_sql,
-                                    sql_operator,
-                                    right_sql,
-                                )
-                            )
-                        else:
-                            rel_query.add_where(
-                                SQL("%s(%s, %s)", sql_operator, left_sql, right_sql)
-                            )
+                    else:
+                        rel_query.add_where(
+                            SQL("%s(%s, %s)", sql_operator, left_sql, right_sql)
+                        )
 
-                        subquery_sql = rel_query.subselect(SQL("1"))
-                        sub_query_mogrified = (
-                            model.env.cr.mogrify(subquery_sql)
-                            .decode("utf-8")
-                            .replace(f"'{rel_model._table}'", f'"{rel_model._table}"')
-                            .replace("%", "%%")
-                        )
-                        sub_queries.append(f"EXISTS({sub_query_mogrified})")
+                    subquery_sql = rel_query.subselect(SQL("1"))
+                    sub_query_mogrified = (
+                        model.env.cr.mogrify(subquery_sql)
+                        .decode("utf-8")
+                        .replace(f"'{rel_model._table}'", f'"{rel_model._table}"')
+                        .replace("%", "%%")
+                    )
+                    sub_queries.append(f"EXISTS({sub_query_mogrified})")
                 query_str = " AND ".join(sub_queries)
             else:
                 query_str = get_geo_func(

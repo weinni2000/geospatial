@@ -20,7 +20,9 @@ import {
     onWillStart,
     onWillUpdateProps,
     proxy,
+    t,
     useEffect,
+    useProps,
     useScope,
 } from "@odoo/owl";
 import {GeoengineRecord} from "../geoengine_record/geoengine_record.esm";
@@ -50,6 +52,18 @@ const DEFAULT_NUM_CLASSES = 5;
 const LEGEND_MAX_ITEMS = 10;
 
 export class GeoengineRenderer extends Component {
+    props = useProps({
+        isSavedOrDiscarded: t.boolean(),
+        archInfo: t.object(),
+        data: t.object(),
+        openRecord: t.function(),
+        editable: t.boolean().optional(),
+        updateRecord: t.function(),
+        onClickDiscard: t.function(),
+        createRecord: t.function(),
+        onDrawStart: t.function(),
+    });
+
     setup() {
         // Captured so `loadView()` can construct RelationalModel instances from
         // deep inside an async callback: its constructor calls Owl hooks
@@ -1358,15 +1372,4 @@ export class GeoengineRenderer extends Component {
 }
 
 GeoengineRenderer.template = "base_geoengine.GeoengineRenderer";
-GeoengineRenderer.props = {
-    isSavedOrDiscarded: {type: Boolean},
-    archInfo: {type: Object},
-    data: {type: Object},
-    openRecord: {type: Function},
-    editable: {type: Boolean, optional: true},
-    updateRecord: {type: Function},
-    onClickDiscard: {type: Function},
-    createRecord: {type: Function},
-    onDrawStart: {type: Function},
-};
 GeoengineRenderer.components = {LayersPanel, GeoengineRecord, RecordsPanel};

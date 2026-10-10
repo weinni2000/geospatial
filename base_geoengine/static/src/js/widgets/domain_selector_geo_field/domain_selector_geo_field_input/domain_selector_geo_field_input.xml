@@ -1,23 +1,50 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <templates xml:space="preserve">
     <t t-name="base_geoengine.DomainSelectorGeoFieldInput">
-        <div class="d-flex align-items-center">
-            <ModelSelector
-                value="this.state.resModel"
-                onModelSelected.bind="this.onModelChange"
-            />
-            <div t-if="this.state.resModel.length > 0" class="col-5">
-                <ModelFieldSelector
-                    fieldName="this.state.fieldName"
-                    resModel="this.state.resModel"
-                    readonly="false"
-                    update="(name) => this.onFieldModelChange(name)"
-                    isDebugMode="false"
+        <t t-set="geoValue" t-value="this.geoValue" />
+        <div class="d-flex align-items-center gap-2">
+            <div class="flex-shrink-0">
+                <Select
+                    value="geoValue.mode"
+                    update="(mode) => this.onModeChange(mode)"
+                    options="this.modeOptions"
                 />
             </div>
-            <button class="btn btn-link col-1" t-on-click.prevent="this.display">
-                <i class="oi oi-fw" data-icon="edit_square" />
-            </button>
+            <t t-if="geoValue.mode === 'records'">
+                <div class="flex-grow-1 overflow-hidden">
+                    <Select
+                        value="geoValue.resModel"
+                        update="(resModel) => this.onModelChange(resModel)"
+                        options="this.modelOptions"
+                        addBlankOption="!geoValue.resModel"
+                        placeholder="this.modelPlaceholder"
+                    />
+                </div>
+                <t t-if="geoValue.resModel">
+                    <div class="flex-grow-1 overflow-hidden">
+                        <Select
+                            value="geoValue.fieldName"
+                            update="(fieldName) => this.onFieldChange(fieldName)"
+                            options="this.fieldOptions"
+                        />
+                    </div>
+                    <button
+                        class="btn btn-link p-0 text-truncate o_geo_domain_button"
+                        t-att-title="this.state.domainDescription"
+                        t-on-click.prevent="() => this.openDomainDialog()"
+                    >
+                        <i class="oi oi-fw" data-icon="edit_square" />
+                        <t t-out="this.state.domainDescription" />
+                    </button>
+                </t>
+            </t>
+            <input
+                t-else=""
+                class="o_input flex-grow-1"
+                t-att-value="geoValue.geometry"
+                placeholder="POINT(1490000 6110000)"
+                t-on-change="(ev) => this.onGeometryChange(ev)"
+            />
         </div>
     </t>
 </templates>

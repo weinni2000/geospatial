@@ -4,9 +4,13 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component, signal} from "@odoo/owl";
+import {Component, signal, t, useProps} from "@odoo/owl";
 
 export class SearchBarRecords extends Component {
+    props = useProps({
+        onInputKeyup: t.function(),
+    });
+
     searchComponentRef = signal.ref();
 
     /**
@@ -21,6 +25,3 @@ export class SearchBarRecords extends Component {
 }
 
 SearchBarRecords.template = "base_geoengine.SearchBarRecords";
-SearchBarRecords.props = {
-    onInputKeyup: {type: Function},
-};

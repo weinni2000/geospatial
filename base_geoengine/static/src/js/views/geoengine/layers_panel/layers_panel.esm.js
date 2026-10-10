@@ -4,19 +4,25 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
+import {Component, onWillStart, proxy, signal, t, usePlugin, useProps} from "@odoo/owl";
+import {useOwnedDialogs, useService} from "@web/core/utils/hooks";
 import {CheckBox} from "@web/core/checkbox/checkbox";
-import {Component, onWillStart, proxy, signal} from "@odoo/owl";
-import {DomainSelectorGeoFieldDialog} from "../../../widgets/domain_selector_geo_field/domain_selector_geo_field_dialog/domain_selector_geo_field_dialog.esm";
+import {DebugModePlugin} from "@web/core/debug_mode_plugin";
 import {FormViewDialog} from "@web/views/view_dialogs/form_view_dialog";
+import {GeoVectorLayerDomainDialog} from "../../../widgets/domain_selector_geo_field/domain_selector_geo_field_dialog/domain_selector_geo_field_dialog.esm";
 import {_t} from "@web/core/l10n/translation";
 import {rasterLayersStore} from "../../../raster_layers_store.esm";
 import {rpc} from "@web/core/network/rpc";
-import {useOwnedDialogs, useService} from "@web/core/utils/hooks";
-import {user} from "@web/core/user";
 import {useSortable} from "@web/core/utils/sortable_owl";
+import {user} from "@web/core/user";
 import {vectorLayersStore} from "../../../vector_layers_store.esm";
 
 export class LayersPanel extends Component {
+    props = useProps({
+        model: t.string(),
+        vectorModel: t.object(),
+    });
+
     rootRef = signal.ref();
 
     setup() {
@@ -25,6 +31,7 @@ export class LayersPanel extends Component {
         this.view = useService("view");
         this.state = proxy({geoengineLayers: {}, isFolded: false});
         this.addDialog = useOwnedDialogs();
+        this.debugMode = usePlugin(DebugModePlugin);
 
         /**
          * Call the model method "get_geoengine_layers" to get all the layers
@@ -214,13 +221,12 @@ export class LayersPanel extends Component {
     }
 
     onEditFilterButtonSelected(vector) {
-        this.addDialog(DomainSelectorGeoFieldDialog, {
+        this.addDialog(GeoVectorLayerDomainDialog, {
             resModel: vector.model,
-            initialValue: vector.model_domain,
+            domain: vector.model_domain || "[]",
             readonly: false,
-            isDebugMode: Boolean(this.env.debug),
-            model: vector,
-            onSelected: (value) => this.onEditFilterDomainChanged(vector, value),
+            isDebugMode: this.debugMode.isActive(),
+            onConfirm: (value) => this.onEditFilterDomainChanged(vector, value),
             title: _t("Domain editing"),
         });
     }
@@ -287,8 +293,4 @@ export class LayersPanel extends Component {
 }
 
 LayersPanel.template = "base_geoengine.LayersPanel";
-LayersPanel.props = {
-    model: {type: String, optional: false},
-    vectorModel: {type: Object, optional: false},
-};
 LayersPanel.components = {CheckBox};

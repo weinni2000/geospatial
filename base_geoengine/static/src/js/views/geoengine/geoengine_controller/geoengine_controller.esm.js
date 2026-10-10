@@ -4,7 +4,7 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
-import {Component, proxy} from "@odoo/owl";
+import {Component, proxy, t, useProps} from "@odoo/owl";
 import {FormViewDialog} from "@web/views/view_dialogs/form_view_dialog";
 import {Layout} from "@web/search/layout";
 import {SearchBar} from "@web/search/search_bar/search_bar";
@@ -19,6 +19,13 @@ import {usePager} from "@web/search/pager_hook";
 import {useSearchBarToggler} from "@web/search/search_bar/search_bar_toggler";
 
 export class GeoengineController extends Component {
+    props = useProps({
+        ...standardViewProps,
+        Model: t.function(),
+        Renderer: t.function(),
+        archInfo: t.object(),
+    });
+
     /**
      * Setup the controller by using the useModel hook.
      */
@@ -206,9 +213,3 @@ export class GeoengineController extends Component {
 
 GeoengineController.template = "base_geoengine.GeoengineController";
 GeoengineController.components = {Layout, SearchBar};
-GeoengineController.props = {
-    ...standardViewProps,
-    Model: Function,
-    Renderer: Function,
-    archInfo: Object,
-};
