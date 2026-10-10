@@ -33,7 +33,8 @@ def value_to_shape(value, use_wkb=False):
             try:
                 int(value, 16)
                 return wkb.loads(value, hex=True)
-            except Exception:
+            except (ValueError, ShapelyError):
+                # not a WKB hex value -> try to load it as WKT
                 try:
                     return wkt.loads(value)
                 except ShapelyError as exc:

@@ -21,7 +21,7 @@ class Base(models.AbstractModel):
     _inherit = "base"
 
     # Array of ash that define layer and data to use
-    _georepr = []
+    _georepr = ()
 
     @api.model
     def fields_get(self, allfields=None, attributes=None):
