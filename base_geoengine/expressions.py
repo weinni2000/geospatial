@@ -177,7 +177,7 @@ def where_calc(model, domain, active_test=True, alias=None):
         and model.env.context.get("active_test", True)
         and not any(item[0] == model._active_name for item in domain)
     ):
-        domain = [(model._active_name, "=", 1)] + domain
+        domain = [(model._active_name, "=", True)] + domain
 
     # Apply access rights and record rules, like BaseModel._search does.
     # Skipped for the superuser (env.su), exactly as in core.
