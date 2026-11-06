@@ -1115,12 +1115,15 @@ export class GeoengineRenderer extends Component {
     }
 
     styleVectorLayer(cfg, data) {
-        // Geostats cannot build a serie from an empty list: a layer without any
-        // value (e.g. its domain matches no record) gets the default style
-        // instead of aborting the rendering of all the layers.
+        // Geostats cannot build a serie without values: a layer where no record
+        // has a usable value (e.g. its domain matches no record, or the attribute
+        // is unset everywhere) gets the default style instead of aborting the
+        // rendering of all the layers.
         if (
             ["colored", "proportion"].includes(cfg.geo_repr) &&
-            !this.extractLayerValues(cfg, data).length
+            !this.extractLayerValues(cfg, data).some(
+                (value) => value !== undefined && value !== null && value !== false
+            )
         ) {
             return this.styleVectorLayerDefault(cfg);
         }
