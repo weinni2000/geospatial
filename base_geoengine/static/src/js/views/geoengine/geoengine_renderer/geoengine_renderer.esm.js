@@ -2,7 +2,6 @@
 
 /* global document */
 /* global localStorage */
-/* global console */
 
 // Libraries loaded dynamically via geoengine_libs.esm.js
 let ol = null;
@@ -1116,6 +1115,15 @@ export class GeoengineRenderer extends Component {
     }
 
     styleVectorLayer(cfg, data) {
+        // Geostats cannot build a serie from an empty list: a layer without any
+        // value (e.g. its domain matches no record) gets the default style
+        // instead of aborting the rendering of all the layers.
+        if (
+            ["colored", "proportion"].includes(cfg.geo_repr) &&
+            !this.extractLayerValues(cfg, data).length
+        ) {
+            return this.styleVectorLayerDefault(cfg);
+        }
         switch (cfg.geo_repr) {
             case "colored":
                 return this.styleVectorLayerColored(cfg, data);
@@ -1191,7 +1199,6 @@ export class GeoengineRenderer extends Component {
                 if (label_text === false) {
                     label_text = "";
                 }
-                console.log(feature.get("attributes").id);
                 styles_map[colors[color_idx]][0].text_.text_ = label_text.toString();
                 return styles_map[colors[color_idx]];
             },

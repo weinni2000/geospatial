@@ -4,6 +4,7 @@
  * Copyright 2023 ACSONE SA/NV
  */
 
+import {Domain, InvalidDomainError} from "@web/core/domain";
 import {DomainField} from "@web/views/fields/domain/domain_field";
 import {DomainSelector} from "@web/core/domain_selector/domain_selector";
 import {TreeEditor} from "@web/core/tree_editor/tree_editor";
@@ -24,6 +25,8 @@ const ACTIVE_IDS_OPERATOR_LABELS = {
     "in active_ids": _t("is in the displayed records"),
     "not in active_ids": _t("is not in the displayed records"),
 };
+
+const GEO_REFERENCE_REGEX = /\{\s*["'][\w.]+\.\w+["']\s*:/;
 
 const ACTIVE_IDS_REGEX = /(["'])(not )?in active_ids\1(\s*,\s*)(["'])\{ACTIVE_IDS\}\4/g;
 
@@ -117,6 +120,23 @@ patch(DomainField.prototype, {
 
     getEvaluatedDomain(props = this.props) {
         const domain = this.getDomain(props);
+        if (
+            props.record.resModel === "geoengine.vector.layer" &&
+            GEO_REFERENCE_REGEX.test(domain)
+        ) {
+            // The indirect geo conditions ({"<model>.<geo field>": <domain>}) hold
+            // a python dict, which the core domain field reports as non-literal.
+            try {
+                return new Domain(replaceActiveIds(domain)).toList(
+                    this.getContext(props)
+                );
+            } catch (error) {
+                if (error instanceof InvalidDomainError) {
+                    return {isInvalid: true};
+                }
+                throw error;
+            }
+        }
         if (!domain.includes(ACTIVE_IDS_VALUE)) {
             return super.getEvaluatedDomain(props);
         }
