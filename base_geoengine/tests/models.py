@@ -22,6 +22,7 @@ class DummyZip(models.Model):
     _name = "dummy.zip"
     _description = "Geoengine demo ZIP"
 
+    active = fields.Boolean(default=True)
     name = fields.Char("ZIP", index=True, required=True)
     city = fields.Char(index=True, required=True)
     the_geom = fields.GeoMultiPolygon("NPA Shape")
@@ -34,6 +35,7 @@ class RetailMachine(models.Model):
     _name = "retail.machine"
     _description = "Geoengine demo retailing machine"
 
+    zip_id = fields.Many2one("dummy.zip")
     the_point = fields.GeoPoint("Coordinate")
     total_sales = fields.Float("Total sale", index=True)
     money_level = fields.Char(index=True)

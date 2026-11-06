@@ -4,6 +4,8 @@ import geojson
 from shapely import wkt
 from shapely.geometry import shape
 
+from odoo.exceptions import AccessError
+from odoo.fields import Domain
 from odoo.orm.model_classes import add_to_registry
 from odoo.tests.common import TransactionCase
 
@@ -513,6 +515,80 @@ class TestModel(TransactionCase):
         """Adding the geo operators keeps the core operator validation."""
         with self.assertRaises(ValueError):
             self.env["retail.machine"].search([("name", "ILIKE", "21")])
+
+    def test_search_equal_preserves_srid(self):
+        """A direct equality uses the field SRID, as indirect equality does."""
+        retails = self.env["retail.machine"]
+        retail = retails.search([], limit=1)
+        self.assertEqual(
+            retails.search([("the_point", "geo_equal", retail.the_point.wkt)]),
+            retail,
+        )
+
+    def test_search_invalid_geo_reference(self):
+        retails = self.env["retail.machine"]
+        for key in ("", "the_geom", "dummy.zip.", "dummy.zip.name", 42):
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                retails.search([("the_point", "geo_intersect", {key: []})])
+
+    def test_search_geo_operator_on_non_geo_field(self):
+        with self.assertRaises(ValueError):
+            self.env["retail.machine"].search([("name", "geo_intersect", "POINT(0 0)")])
+
+    def test_search_geo_relational_path(self):
+        """Let the ORM resolve a relational path before compiling geo SQL."""
+        retails = self.env["retail.machine"]
+        retail = retails.search([], limit=1)
+        zip_item = self.env["dummy.zip"].search([("name", "=", "1169")])
+        retail.zip_id = zip_item
+        self.assertEqual(
+            retails.search([("zip_id.the_geom", "geo_equal", zip_item.the_geom.wkt)]),
+            retail,
+        )
+
+    def test_search_indirect_active_domain(self):
+        """Domain objects and explicit active filters work in related queries."""
+        retails = self.env["retail.machine"]
+        zip_item = self.env["dummy.zip"].search([("name", "=", "1169")])
+        expected = retails.search(
+            [("the_point", "geo_intersect", zip_item.the_geom.wkt)]
+        )
+        self.assertTrue(expected)
+        zip_item.active = False
+        domain = [("the_point", "geo_intersect", {"dummy.zip.the_geom": []})]
+        self.assertFalse(retails.search(domain) & expected)
+        self.assertEqual(
+            retails.with_context(active_test=False).search(domain) & expected, expected
+        )
+        explicit = Domain("active", "=", False)
+        self.assertEqual(
+            retails.search(
+                [("the_point", "geo_intersect", {"dummy.zip.the_geom": explicit})]
+            ),
+            expected,
+        )
+
+    def test_search_indirect_requires_related_model_access(self):
+        """Related spatial records require read access, even with an empty domain."""
+        self.env["ir.access"].create(
+            {
+                "name": "retail.machine read (test)",
+                "model_id": self.env["ir.model"]._get("retail.machine").id,
+                "group_id": self.env.ref("base.group_user").id,
+                "operation": "r",
+            }
+        )
+        user = self.env["res.users"].create(
+            {
+                "name": "Geo no zip access (test)",
+                "login": "geo_no_zip_access_test",
+                "group_ids": [(6, 0, [self.env.ref("base.group_user").id])],
+            }
+        )
+        with self.assertRaises(AccessError):
+            self.env["retail.machine"].with_user(user).search(
+                [("the_point", "geo_intersect", {"dummy.zip.the_geom": []})]
+            )
 
     def test_search_intersect_for_zip_1169_with_multiple_domain(self):
         retails = self.env["retail.machine"]
