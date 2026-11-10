@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Copyright 2026 mytime.click
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<templates>
+    <t
+        t-name="base_geoengine_logo.RecordsPanel"
+        t-inherit="base_geoengine.RecordsPanel"
+        t-inherit-mode="extension"
+    >
+        <xpath expr="//button[hasclass('btn-record')]/span" position="before">
+            <t t-set="image_url" t-value="this.getRecordImageUrl(record)" />
+            <img
+                t-if="image_url"
+                class="o_geoengine_record_image me-2"
+                t-att-src="image_url"
+                alt=""
+                loading="lazy"
+            />
+        </xpath>
+        <xpath expr="//button[hasclass('btn-record')]" position="attributes">
+            <attribute
+                name="class"
+                add="d-flex align-items-center text-start"
+                separator=" "
+            />
+        </xpath>
+    </t>
+</templates>

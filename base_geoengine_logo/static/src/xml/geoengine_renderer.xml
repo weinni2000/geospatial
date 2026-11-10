@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Copyright 2026 mytime.click
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<templates>
+    <t
+        t-name="base_geoengine_logo.GeoengineRenderer"
+        t-inherit="base_geoengine.GeoengineRenderer"
+        t-inherit-mode="extension"
+    >
+        <xpath expr="//GeoengineRecord" position="before">
+            <img
+                t-if="this.state.popupImageUrl"
+                class="o_geoengine_popup_image d-block mb-2"
+                t-att-src="this.state.popupImageUrl"
+                alt=""
+            />
+        </xpath>
+    </t>
+</templates>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Copyright 2026 mytime.click
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="geo_vector_view_form" model="ir.ui.view">
+        <field name="name">geoengine.vector.layer.form (in base_geoengine_logo)</field>
+        <field name="model">geoengine.vector.layer</field>
+        <field name="inherit_id" ref="base_geoengine.geo_vector_view_form" />
+        <field name="arch" type="xml">
+            <field name="display_polygon_labels" position="after">
+                <field name="record_image_display" />
+                <field
+                    name="record_image_min_visible"
+                    invisible="record_image_display != 'center'"
+                />
+                <field
+                    name="record_image_min_size"
+                    invisible="record_image_display != 'center'"
+                />
+                <field
+                    name="record_image_max_size"
+                    invisible="record_image_display != 'center'"
+                />
+            </field>
+        </field>
+    </record>
+    <record id="geo_vector_geoengine_view_form" model="ir.ui.view">
+        <field
+            name="name"
+        >geoengine.vector.layer.geoengine.form (in base_geoengine_logo)</field>
+        <field name="model">geoengine.vector.layer</field>
+        <field name="inherit_id" ref="base_geoengine.geo_vector_geoengine_view_form" />
+        <field name="arch" type="xml">
+            <field name="display_polygon_labels" position="after">
+                <field name="record_image_display" />
+                <field
+                    name="record_image_min_visible"
+                    invisible="record_image_display != 'center'"
+                />
+                <field
+                    name="record_image_min_size"
+                    invisible="record_image_display != 'center'"
+                />
+                <field
+                    name="record_image_max_size"
+                    invisible="record_image_display != 'center'"
+                />
+            </field>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,14 @@
+// Copyright 2026 mytime.click
+// License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
+.o_geoengine_record_image {
+    width: 32px;
+    height: 24px;
+    flex-shrink: 0;
+    object-fit: contain;
+}
+
+.o_geoengine_popup_image {
+    max-width: 100%;
+    max-height: 64px;
+    object-fit: contain;
+}

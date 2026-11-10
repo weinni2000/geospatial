@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Copyright 2026 mytime.click
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="geoengine_view_form" model="ir.ui.view">
+        <field name="name">geoengine.view.form (in base_geoengine_logo)</field>
+        <field name="model">ir.ui.view</field>
+        <field name="inherit_id" ref="base_geoengine.geoengine_view_form" />
+        <field name="arch" type="xml">
+            <field name="default_zoom" position="after">
+                <field
+                    name="geoengine_record_image_field_id"
+                    options="{'no_create': True}"
+                />
+            </field>
+        </field>
+    </record>
+</odoo>
