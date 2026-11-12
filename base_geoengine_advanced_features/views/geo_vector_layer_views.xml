@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Copyright 2026 mytime.click
+     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl). -->
+<odoo>
+    <record id="geo_vector_view_form" model="ir.ui.view">
+        <field
+            name="name"
+        >geoengine.vector.layer.form (in base_geoengine_advanced_features)</field>
+        <field name="model">geoengine.vector.layer</field>
+        <field name="inherit_id" ref="base_geoengine.geo_vector_view_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//group[field[@name='begin_color']]" position="inside">
+                <group
+                    name="advanced_color_group"
+                    colspan="4"
+                    invisible="geo_repr not in ('proportion', 'colored')"
+                >
+                    <field
+                        name="proportion_colored"
+                        invisible="geo_repr != 'proportion'"
+                    />
+                    <field name="empty_value_color" widget="color" />
+                </group>
+            </xpath>
+            <xpath expr="//group[field[@name='end_color']]" position="attributes">
+                <attribute
+                    name="invisible"
+                >geo_repr == 'basic' or (geo_repr == 'proportion' and not proportion_colored)</attribute>
+            </xpath>
+        </field>
+    </record>
+    <record id="geo_vector_geoengine_view_form" model="ir.ui.view">
+        <field
+            name="name"
+        >geoengine.vector.layer.geoengine.form (in base_geoengine_advanced_features)</field>
+        <field name="model">geoengine.vector.layer</field>
+        <field name="inherit_id" ref="base_geoengine.geo_vector_geoengine_view_form" />
+        <field name="arch" type="xml">
+            <xpath expr="//group[field[@name='begin_color']]" position="inside">
+                <group
+                    name="advanced_color_group"
+                    colspan="4"
+                    invisible="geo_repr not in ('proportion', 'colored')"
+                >
+                    <field
+                        name="proportion_colored"
+                        invisible="geo_repr != 'proportion'"
+                    />
+                    <field name="empty_value_color" widget="color" />
+                </group>
+            </xpath>
+            <xpath expr="//group[field[@name='end_color']]" position="attributes">
+                <attribute
+                    name="invisible"
+                >geo_repr == 'basic' or (geo_repr == 'proportion' and not proportion_colored)</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>
